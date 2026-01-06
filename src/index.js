@@ -90,9 +90,16 @@ export async function runScan(url, options) {
 
     // Wait for ANDI to be fully attached and ready
     try {
-      await page.waitForSelector('#andiBar', { state: 'attached', timeout: 5000 });
+      await page.waitForSelector('#andiBar', {
+        state: 'attached',
+        timeout: 5000,
+      });
     } catch (e) {
-      console.warn(chalk.yellow('Warning: #andiBar not detected via selector, but injection reported success.'));
+      console.warn(
+        chalk.yellow(
+          'Warning: #andiBar not detected via selector, but injection reported success.'
+        )
+      );
     }
 
     const modules = [

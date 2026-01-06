@@ -9,7 +9,7 @@ program
   .name('andi-scan')
   .description('ANDI Accessibility Scanning CLI')
   .version('1.0.0')
-  .argument('<url>', 'URL to scan')
+  .argument('<urls...>', 'URLs to scan')
   .option(
     '-b, --browser <browser>',
     'Browser to use: chromium, firefox, webkit',
@@ -20,13 +20,27 @@ program
   .option('--headed', 'Run in headed mode', false)
   .option('-v, --verbose', 'Enable verbose logging', false)
   .option('--csv', 'Output results to CSV', false)
-  .action(async (url, options) => {
+  .action(async (urls, options) => {
     try {
-      console.log(chalk.blue(`Starting scan for ${url}...`));
-      await runScan(url, options);
-      console.log(chalk.green('Scan complete!'));
+      console.log(chalk.blue(`Received ${urls.length} URL(s) to scan.`));
+
+      for (const [index, url] of urls.entries()) {
+        console.log(
+          chalk.bold(
+            `\n--- Starting Scan ${index + 1} of ${urls.length}: ${url} ---`
+          )
+        );
+        try {
+          await runScan(url, options);
+        } catch (err) {
+          console.error(chalk.red(`Failed to scan ${url}:`), err.message);
+          // Continue to next URL
+        }
+      }
+
+      console.log(chalk.green('\nAll requests processed!'));
     } catch (error) {
-      console.error(chalk.red('Fatal Error:'), error);
+      console.error(chalk.red('Fatal CLI Error:'), error);
       process.exit(1);
     }
   });

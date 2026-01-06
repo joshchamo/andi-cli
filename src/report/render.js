@@ -13,6 +13,11 @@ export async function generateReport(summary, alerts, outputPath) {
   );
   const template = Handlebars.compile(templateSource);
 
+  // Register 'eq' helper
+  Handlebars.registerHelper('eq', function (a, b) {
+    return a === b;
+  });
+
   // Sort alerts by severity (Danger first)
   const severityOrder = { Danger: 0, Warning: 1, Caution: 2 };
   const sortedAlerts = [...alerts].sort((a, b) => {
@@ -22,8 +27,8 @@ export async function generateReport(summary, alerts, outputPath) {
   });
 
   const html = template({
-    ...summary,
-    alerts: sortedAlerts,
+    summary: summary,
+    issues: sortedAlerts,
   });
 
   await fs.outputFile(outputPath, html);

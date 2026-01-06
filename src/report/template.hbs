@@ -1,69 +1,395 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANDI Scan Report - {{runId}}</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2rem; color: #333; }
-        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
-        .summary-card { background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
-        .stat { font-size: 1.2rem; margin-right: 2rem; }
-        .label { font-weight: bold; color: #666; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; vertical-align: top; }
-        th { background: #eee; }
-        .severity-Danger { color: #d9534f; font-weight: bold; }
-        .severity-Warning { color: #f0ad4e; font-weight: bold; }
-        .severity-Caution { color: #5bc0de; font-weight: bold; }
-        .code-snippet { font-family: monospace; background: #f4f4f4; padding: 2px 4px; border-radius: 4px; word-break: break-all; font-size: 0.9em; color: #444; }
-        .details { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
-    </style>
+  <meta charset="utf-8" />
+  <title>ANDI Scan Report – {{summary.runId}}</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f7f7f7;
+      color: #1b1b1b;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 { margin-bottom: 4px; }
+    h2 { margin-top: 32px; }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      margin-bottom: 18px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .badge {
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .danger { background: #d54309; color: white; }
+    .warning { background: #ffbe2e; color: #222; }
+    .caution { background: #e5e5e5; color: #333; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: white;
+      table-layout: fixed;
+    }
+
+    th:nth-child(1) { width: 90px; }  /* Severity */
+    th:nth-child(2) { width: 140px; } /* Module */
+    th:nth-child(3) { width: 40%; }   /* Alert */
+    th:nth-child(4) { width: auto; }  /* Element takes remaining */
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e6e6e6;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+
+    th { background: #fafafa; }
+
+    code {
+      background: #f3f3f3;
+      padding: 4px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    pre {
+      overflow-x: auto;
+      background: #f3f3f3;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: .9rem;
+    }
+
+    .detail {
+      margin-top: 6px;
+      font-size: .9rem;
+      word-break: break-word;
+    }
+
+    .muted { color: #666; }
+
+    .small { font-size: .85rem; }
+
+    /* New styles for copyable code blocks */
+    .code-block-wrapper {
+      position: relative;
+      background: #f3f3f3;
+      border-radius: 6px;
+      margin-top: 8px;
+      border: 1px solid #e1e1e1;
+    }
+
+    .code-block-wrapper pre {
+      margin: 0;
+      padding: 12px;
+      padding-top: 36px; /* Space for button */
+      background: transparent; /* Wrapper handles bg */
+      border: none;
+      border-radius: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    .code-block-wrapper .code-content {
+      /* Container for pre to handle height properly */
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: #e0e0e0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: #333;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    .copy-btn:hover {
+      background: #d0d0d0;
+      border-color: #bbb;
+    }
+
+    /* Expandable Code Blocks */
+    .code-block-wrapper.collapsed pre {
+      max-height: 160px; /* Show roughly 8-10 lines */
+      overflow: hidden;
+      mask-image: linear-gradient(180deg, black 60%, transparent);
+      -webkit-mask-image: linear-gradient(180deg, black 60%, transparent);
+    }
+    
+    .expand-btn {
+      display: none;
+      width: 100%;
+      text-align: center;
+      background: #e9e9e9;
+      border: none;
+      border-top: 1px solid #ddd;
+      padding: 6px;
+      font-size: 0.8rem;
+      color: #0066cc;
+      cursor: pointer;
+      border-radius: 0 0 6px 6px;
+    }
+
+    .code-block-wrapper.collapsed .expand-btn {
+      display: block;
+    }
+
+    /* Sortable Headers */
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 24px;
+    }
+    th.sortable:hover {
+      background: #f0f0f0;
+    }
+    th.sortable::after {
+      content: '↕';
+      position: absolute;
+      right: 8px;
+      color: #999;
+      font-size: 0.8rem;
+    }
+    th.sorted-asc::after { content: '↑'; color: #333; }
+    th.sorted-desc::after { content: '↓'; color: #333; }
+
+  </style>
 </head>
+
 <body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="card">
     <h1>ANDI Scan Report</h1>
-    <div class="summary-card">
-        <p><span class="label">Run ID:</span> {{runId}}</p>
-        <p><span class="label">URL:</span> <a href="{{url}}">{{url}}</a></p>
-        <p><span class="label">Timestamp:</span> {{timestamp}}</p>
-        <p><span class="label">Browser:</span> {{browserUsed}}</p>
-        <div style="margin-top: 1rem;">
-            <span class="stat"><span class="label">Total Alerts:</span> {{totalAlerts}}</span>
-            <span class="stat severity-Danger"><span class="label">Danger:</span> {{severityBreakdown.Danger}}</span>
-            <span class="stat severity-Warning"><span class="label">Warning:</span> {{severityBreakdown.Warning}}</span>
-            <span class="stat severity-Caution"><span class="label">Caution:</span> {{severityBreakdown.Caution}}</span>
-        </div>
+
+    <div class="meta-grid small">
+      <div><strong>Run ID:</strong> {{summary.runId}}</div>
+      <div><strong>URL:</strong> <a href="{{summary.url}}" target="_blank">{{summary.url}}</a></div>
+      <div><strong>Timestamp:</strong> {{summary.timestamp}}</div>
+      <div><strong>Browser:</strong> {{summary.browserUsed}}</div>
     </div>
 
-    <h2>Detailed Alerts</h2>
+    <hr>
+
+    <div class="small">
+      <strong>Total Alerts:</strong> {{summary.totalAlerts}}
+      &nbsp;&nbsp;
+      <span class="badge danger">Danger: {{summary.severityBreakdown.Danger}}</span>
+      <span class="badge warning">Warning: {{summary.severityBreakdown.Warning}}</span>
+      <span class="badge caution">Caution: {{summary.severityBreakdown.Caution}}</span>
+    </div>
+  </div>
+
+  <!-- DETAILED ALERTS -->
+  <h2>Detailed Alerts</h2>
+
+  <div class="card">
     <table>
-        <thead>
-            <tr>
-                <th>Severity</th>
-                <th>Module</th>
-                <th>Alert</th>
-                <th>Element</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{#each alerts}}
-            <tr>
-                <td class="severity-{{severity}}">{{severity}}</td>
-                <td>{{andiModule}}</td>
-                <td>
-                    <div>{{alertMessage}}</div>
-                    <div class="details">{{{alertDetails}}}</div>
-                    {{#if screenshotPath}}
-                    <div style="margin-top:5px;"><a href="{{screenshotPath}}" target="_blank">View Screenshot</a></div>
-                    {{/if}}
-                </td>
-                <td>
-                    <div><strong>{{elementTag}}</strong> {{#if elementId}}#{{elementId}}{{/if}}</div>
-                    <div class="code-snippet">{{elementSnippet}}</div>
-                </td>
-            </tr>
-            {{/each}}
-        </tbody>
+      <thead>
+        <tr>
+          <th class="sortable" onclick="sortTable(0)">Severity</th>
+          <th class="sortable" onclick="sortTable(1)">Module</th>
+          <th class="sortable" onclick="sortTable(2)">Alert</th>
+          <th class="sortable" onclick="sortTable(3)">Element</th>
+        </tr>
+      </thead>
+
+      <tbody>
+      {{#each issues}}
+        <tr>
+          <td>
+            <span class="badge
+              {{#if (eq severity "Danger")}}danger{{/if}}
+              {{#if (eq severity "Warning")}}warning{{/if}}
+              {{#if (eq severity "Caution")}}caution{{/if}}">
+              {{severity}}
+            </span>
+          </td>
+
+          <td>{{andiModule}}</td>
+
+          <td>
+            <div>{{alertMessage}}</div>
+
+            {{#if alertDetails}}
+              <div class="detail muted">{{{alertDetails}}}</div>
+            {{/if}}
+
+            {{#if tt_mapping}}
+              <div class="detail small">
+                <strong>Trusted Tester Mapping:</strong> {{tt_mapping}}
+              </div>
+            {{/if}}
+          </td>
+
+          <td>
+            <div><code>{{elementTag}}</code></div>
+
+            {{#if elementId}}
+              <div class="small muted">#{{elementId}}</div>
+            {{/if}}
+
+            {{#if elementSnippet}}
+              <div class="code-block-wrapper">
+                <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                <div class="code-content"><pre>{{elementSnippet}}</pre></div>
+                <button class="expand-btn" onclick="toggleExpand(this)">Show more</button>
+              </div>
+            {{/if}}
+          </td>
+        </tr>
+      {{/each}}
+      </tbody>
     </table>
+  </div>
+
+</div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize code blocks
+      const wrappers = document.querySelectorAll('.code-block-wrapper');
+      wrappers.forEach(wrapper => {
+        const pre = wrapper.querySelector('pre');
+        // Check if content height is significant (approx 160px is our collapsed height)
+        if (pre.scrollHeight > 180) {
+          wrapper.classList.add('collapsed');
+        } else {
+          // Hide expand button for short snippets
+          const btn = wrapper.querySelector('.expand-btn');
+          if(btn) btn.style.display = 'none';
+        }
+      });
+    });
+
+    function toggleExpand(btn) {
+      const wrapper = btn.closest('.code-block-wrapper');
+      wrapper.classList.toggle('collapsed');
+      btn.innerText = wrapper.classList.contains('collapsed') ? 'Show more' : 'Show less';
+    }
+
+  function copyToClipboard(btn) {
+    const wrapper = btn.closest('.code-block-wrapper');
+    const codeBlock = wrapper.querySelector('pre'); 
+    const text = codeBlock.innerText;
+
+    navigator.clipboard.writeText(text).then(() => {
+      const originalText = btn.innerText;
+      btn.innerText = 'Copied!';
+      btn.style.background = '#d4edda';
+      btn.style.borderColor = '#c3e6cb';
+      
+      setTimeout(() => {
+        btn.innerText = originalText;
+        btn.style.background = '';
+        btn.style.borderColor = '';
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      btn.innerText = 'Error';
+    });
+  }
+
+  // Sorting Logic
+  function sortTable(n) {
+    const table = document.querySelector("table");
+    let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+    switching = true;
+    dir = "asc"; 
+    
+    // Reset arrows
+    document.querySelectorAll("th").forEach(th => {
+      th.classList.remove("sorted-asc", "sorted-desc");
+    });
+    
+    // Set arrow for current header
+    const headers = table.querySelectorAll("th");
+    
+    while (switching) {
+      switching = false;
+      rows = table.rows;
+      
+      for (i = 1; i < (rows.length - 1); i++) {
+        shouldSwitch = false;
+        x = rows[i].getElementsByTagName("TD")[n];
+        y = rows[i + 1].getElementsByTagName("TD")[n];
+        
+        let xVal = x.textContent.trim().toLowerCase();
+        let yVal = y.textContent.trim().toLowerCase();
+        
+        // Special weighting for Severity (Column 0)
+        if (n === 0) {
+           const severityWeight = { 'danger': 3, 'warning': 2, 'caution': 1 };
+           xVal = severityWeight[xVal] || 0;
+           yVal = severityWeight[yVal] || 0;
+        }
+
+        if (dir === "asc") {
+          if (xVal > yVal) {
+            shouldSwitch = true;
+            break;
+          }
+        } else if (dir === "desc") {
+          if (xVal < yVal) {
+            shouldSwitch = true;
+            break;
+          }
+        }
+      }
+      
+      if (shouldSwitch) {
+        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+        switching = true;
+        switchcount ++;      
+      } else {
+        if (switchcount === 0 && dir === "asc") {
+          dir = "desc";
+          switching = true;
+        }
+      }
+    }
+    
+    // Update header class
+    headers[n].classList.add(dir === "asc" ? "sorted-asc" : "sorted-desc");
+  }
+</script>
+
 </body>
 </html>

@@ -5,6 +5,7 @@ import { launchBrowser } from './browser.js';
 import { injectAndi } from './andi-inject.js';
 import { extractAlerts } from './extractors/index.js';
 import { generateReport } from './report/render.js';
+import { generateCSV } from './report/csv.js';
 
 export async function runScan(url, options) {
   // Generate Run ID
@@ -248,6 +249,12 @@ export async function runScan(url, options) {
       allAlerts,
       path.join(runDir, `report-${runId}.html`)
     );
+
+    // CSV Output
+    if (options.csv) {
+      if (options.verbose) console.log(chalk.gray('Generating CSV...'));
+      await generateCSV(allAlerts, path.join(runDir, 'alerts.csv'));
+    }
 
     console.log(chalk.green(`Scan complete. results saved to: ${runDir}`));
   } catch (error) {

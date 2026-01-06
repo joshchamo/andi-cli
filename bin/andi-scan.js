@@ -19,6 +19,7 @@ program
   .option('-s, --screenshots', 'Take screenshots of alerts', false)
   .option('--headed', 'Run in headed mode', false)
   .option('-v, --verbose', 'Enable verbose logging', false)
+  .option('--csv', 'Output results to CSV', false)
   .action(async (url, options) => {
     try {
       console.log(chalk.blue(`Starting scan for ${url}...`));

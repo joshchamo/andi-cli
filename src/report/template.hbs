@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANDI Scan Report - {{runId}}</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2rem; color: #333; }
+        h1, h2 { border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
+        .summary-card { background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .stat { font-size: 1.2rem; margin-right: 2rem; }
+        .label { font-weight: bold; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; vertical-align: top; }
+        th { background: #eee; }
+        .severity-Danger { color: #d9534f; font-weight: bold; }
+        .severity-Warning { color: #f0ad4e; font-weight: bold; }
+        .severity-Caution { color: #5bc0de; font-weight: bold; }
+        .code-snippet { font-family: monospace; background: #f4f4f4; padding: 2px 4px; border-radius: 4px; word-break: break-all; font-size: 0.9em; color: #444; }
+        .details { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>ANDI Scan Report</h1>
+    <div class="summary-card">
+        <p><span class="label">Run ID:</span> {{runId}}</p>
+        <p><span class="label">URL:</span> <a href="{{url}}">{{url}}</a></p>
+        <p><span class="label">Timestamp:</span> {{timestamp}}</p>
+        <div style="margin-top: 1rem;">
+            <span class="stat"><span class="label">Total Alerts:</span> {{totalAlerts}}</span>
+            <span class="stat severity-Danger"><span class="label">Danger:</span> {{severityBreakdown.Danger}}</span>
+            <span class="stat severity-Warning"><span class="label">Warning:</span> {{severityBreakdown.Warning}}</span>
+            <span class="stat severity-Caution"><span class="label">Caution:</span> {{severityBreakdown.Caution}}</span>
+        </div>
+    </div>
+
+    <h2>Detailed Alerts</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Severity</th>
+                <th>Module</th>
+                <th>Alert</th>
+                <th>Element</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each alerts}}
+            <tr>
+                <td class="severity-{{severity}}">{{severity}}</td>
+                <td>{{andiModule}}</td>
+                <td>
+                    <div>{{alertMessage}}</div>
+                    <div class="details">{{{alertDetails}}}</div>
+                    {{#if screenshotPath}}
+                    <div style="margin-top:5px;"><a href="{{screenshotPath}}" target="_blank">View Screenshot</a></div>
+                    {{/if}}
+                </td>
+                <td>
+                    <div><strong>{{elementTag}}</strong> {{#if elementId}}#{{elementId}}{{/if}}</div>
+                    <div class="code-snippet">{{elementSnippet}}</div>
+                </td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</body>
+</html>

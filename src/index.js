@@ -45,7 +45,10 @@ export async function runScan(url, options) {
 
     console.log(chalk.blue('Navigating to ' + url + '...'));
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      // Use networkidle to wait for redirects to settle
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+      // Ensure DOM is fully parsed
+      await page.waitForLoadState('domcontentloaded');
     } catch (e) {
       console.warn(
         chalk.yellow(
@@ -83,6 +86,13 @@ export async function runScan(url, options) {
       throw new Error(
         'ANDI injection failed. ANDI UI did not appear. Check URL or CSP.'
       );
+    }
+
+    // Wait for ANDI to be fully attached and ready
+    try {
+      await page.waitForSelector('#andiBar', { state: 'attached', timeout: 5000 });
+    } catch (e) {
+      console.warn(chalk.yellow('Warning: #andiBar not detected via selector, but injection reported success.'));
     }
 
     const modules = [

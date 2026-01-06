@@ -220,6 +220,8 @@ export async function runScan(url, options) {
     let issueCounter = 0;
     for (const alert of allAlerts) {
       issueCounter++;
+      // Add browser info to individual issue
+      alert.browserUsed = options.browser;
       const filename = String(issueCounter).padStart(9, '0') + '.json';
       await fs.writeJson(path.join(issuesDir, filename), alert, { spaces: 2 });
     }
@@ -229,6 +231,7 @@ export async function runScan(url, options) {
       runId,
       url,
       timestamp: new Date().toISOString(),
+      browserUsed: options.browser,
       totalPages: 1,
       totalAlerts: allAlerts.length,
       severityBreakdown,

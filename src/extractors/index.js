@@ -93,6 +93,34 @@ export async function extractAlerts(page, moduleName) {
                     ? extendedDetails
                     : alertContent;
 
+                // Create Clean Snippet
+                let cleanSnippet = el.prop('outerHTML');
+                try {
+                  const clone = el.clone();
+                  // Strip ANDI classes
+                  const currentClasses = clone.attr('class') || '';
+                  const newClasses = currentClasses
+                    .split(/\s+/)
+                    .filter((c) => !c.startsWith('ANDI508-'))
+                    .join(' ');
+                  if (newClasses) clone.attr('class', newClasses);
+                  else clone.removeAttr('class');
+
+                  // Strip ANDI attributes
+                  const rawNode = clone[0];
+                  if (rawNode.attributes) {
+                    for (let i = rawNode.attributes.length - 1; i >= 0; i--) {
+                      const name = rawNode.attributes[i].name;
+                      if (name.startsWith('data-andi508')) {
+                        rawNode.removeAttribute(name);
+                      }
+                    }
+                  }
+                  cleanSnippet = clone.prop('outerHTML');
+                } catch (e) {
+                  /* fallback */
+                }
+
                 results.push({
                   andiModule: modName,
                   severity: severityMap[key],
@@ -101,8 +129,7 @@ export async function extractAlerts(page, moduleName) {
                   elementTag: el.prop('tagName').toLowerCase(),
                   elementId: el.attr('id') || '',
                   andiElementIndex: el.attr('data-andi508-index'),
-                  elementSnippet: el.prop('outerHTML').substring(0, 1000), // Capture decent chunk
-                  // Trusted Tester mapping support if present in ANDI data
+                  elementSnippet: cleanSnippet.substring(0, 1000),
                   tt_mapping: '',
                 });
               });

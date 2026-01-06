@@ -6,9 +6,12 @@ ANDI Scan is a Node.js CLI tool that automates the [ANDI](https://github.com/SSA
 
 - **Automated Injection**: Injects the official ANDI bookmarklet script.
 - **Full Coverage**: Scans all 8 ANDI modules (Focusable Elements, Graphics, Links, Tables, Structures, Color Contrast, Hidden Content, Iframes).
-- **Report Generation**: Outputs JSON data for every alert, a summary JSON, and a readable HTML report.
-- **Screenshots**: Optionally captures screenshots of failing elements.
+- **Report Generation**: 
+  - **Polished HTML**: Uses Handlebars templating with sortable columns, copyable code snippets, and collapsible details.
+  - **CSV Output**: Optional CSV export for data analysis.
+  - **JSON**: Full raw data export.
 - **Cross-Browser**: Supports Chromium, Firefox, and WebKit.
+- **Screenshots**: Optionally captures screenshots of failing elements.
 
 ## Installation
 
@@ -36,19 +39,30 @@ node ./bin/andi-scan.js https://example.com
 |------|-------------|---------|
 | `-b, --browser <name>` | Browser to use: `chromium`, `firefox`, `webkit`. | `chromium` |
 | `-o, --out <path>` | Output directory for reports. | `./runs` |
+| `--csv` | Generate a CSV summary report. | `false` |
 | `-s, --screenshots` | Enable taking screenshots of alerted elements. | `false` |
 | `--headed` | Run the browser in headed mode (visible UI). | `false` |
 
 ### Examples
 
-Run with screenshots and output to specific folder:
+**Basic Scan:**
+```bash
+node ./bin/andi-scan.js https://broken-workshop.dequelabs.com/
+```
+
+**Generate CSV and use Firefox:**
+```bash
+node ./bin/andi-scan.js https://broken-workshop.dequelabs.com/ --browser firefox --csv
+```
+
+**Run with screenshots and store in custom folder:**
 ```bash
 node ./bin/andi-scan.js https://jsonlint.com --screenshots --out ./my-reports
 ```
 
-Use Firefox in headed mode (useful for debugging):
+**Debug Mode (Headed):**
 ```bash
-node ./bin/andi-scan.js https://jsonlint.com --browser firefox --headed
+node ./bin/andi-scan.js https://example.com --headed
 ```
 
 ## Output Structure

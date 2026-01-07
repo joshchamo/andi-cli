@@ -58,23 +58,23 @@ export async function extractAlerts(page, moduleName) {
                     const likelyContainers = [
                       '#ANDI508-additionalPage',
                       '#ANDI508-alertList',
-                      '#ANDI508-elementDetails',
+                      '#ANDI508-elementDetails'
                     ];
 
                     for (const sel of likelyContainers) {
                       const c = $(sel);
-                      if (c.length && c.text().trim().length > 5) {
+                      // Strict length check can miss short but critical output like "Active Element"
+                      // ANDI Output container is critical, so we check specifically for it
+                      if (c.length) { 
                         if (sel === '#ANDI508-elementDetails') {
                           // Capture HTML for Element Details to preserve styling/structure
-                          // We also want to treat the ANDI Output spans as blocks for readability
-                          let html = c.html();
-                          // Optional: Remove IDs to prevent duplicates in the final report? 
-                          // For now, raw HTML is better than text-smash.
-                          extendedDetails += html + '\n';
-                        } else {
-                          extendedDetails += c.text().trim() + '\n';
-                        }
-                      }
+                          // We ensure meaningful content by checking if it contains the Output Container or Components Table
+                          if (c.find('#ANDI508-outputText').length || c.find('#ANDI508-accessibleComponentsTable').length) {
+                             let html = c.html();
+                             extendedDetails += html + '\n';
+                          }
+                        } else if (c.text().trim().length > 0) {
+                          // For other containers, capture if there is any text
                     }
 
                     // Specific check for Contrast Ratio if not found

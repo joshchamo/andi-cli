@@ -58,20 +58,41 @@ export async function extractAlerts(page, moduleName) {
                     const likelyContainers = [
                       '#ANDI508-additionalPage',
                       '#ANDI508-alertList',
-                      '#ANDI508-elementDetails'
+                      '#ANDI508-elementDetails',
                     ];
 
                     for (const sel of likelyContainers) {
                       const c = $(sel);
                       // Strict length check can miss short but critical output like "Active Element"
                       // ANDI Output container is critical, so we check specifically for it
-                      if (c.length) { 
+                      if (c.length) {
                         if (sel === '#ANDI508-elementDetails') {
                           // Capture HTML for Element Details to preserve styling/structure
                           // We ensure meaningful content by checking if it contains the Output Container or Components Table
-                          if (c.find('#ANDI508-outputText').length || c.find('#ANDI508-accessibleComponentsTable').length) {
-                             let html = c.html();
-                             extendedDetails += html + '\n';
+                          if (
+                            c.find('#ANDI508-outputText').length ||
+                            c.find('#ANDI508-accessibleComponentsTable').length
+                          ) {
+                            // Clone to modify structure without affecting live page
+                            const clone = c.clone();
+                            // Remove redundant element name info (tag/id) as we show this in the report column
+                            clone
+                              .find('#ANDI508-elementNameContainer')
+                              .remove();
+                            // Remove empty additional details if legitimate empty
+                            if (
+                              clone
+                                .find('#ANDI508-additionalElementDetails')
+                                .text()
+                                .trim().length === 0
+                            ) {
+                              clone
+                                .find('#ANDI508-additionalElementDetails')
+                                .remove();
+                            }
+
+                            let html = clone.html();
+                            extendedDetails += html + '\n';
                           }
                         } else if (c.text().trim().length > 0) {
                           // For other containers, capture if there is any text

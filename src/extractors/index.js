@@ -64,7 +64,16 @@ export async function extractAlerts(page, moduleName) {
                     for (const sel of likelyContainers) {
                       const c = $(sel);
                       if (c.length && c.text().trim().length > 5) {
-                        extendedDetails += c.text().trim() + '\n';
+                        if (sel === '#ANDI508-elementDetails') {
+                          // Capture HTML for Element Details to preserve styling/structure
+                          // We also want to treat the ANDI Output spans as blocks for readability
+                          let html = c.html();
+                          // Optional: Remove IDs to prevent duplicates in the final report? 
+                          // For now, raw HTML is better than text-smash.
+                          extendedDetails += html + '\n';
+                        } else {
+                          extendedDetails += c.text().trim() + '\n';
+                        }
                       }
                     }
 

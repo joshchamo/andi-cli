@@ -50,6 +50,42 @@
     .warning { background: #ffb74b; color: #222; }
     .caution { background: #ffee7e; color: #222; }
 
+    /* ANDI Output Styling */
+    #ANDI508-outputText {
+      background: #000;
+      color: #fff;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 5px;
+      font-family: monospace;
+    }
+
+    /* Force block display for new lines */
+    .ANDI508-display-ariaLabel,
+    .ANDI508-display-ariaLabelledby,
+    .ANDI508-display-ariaDescription, 
+    .ANDI508-display-ariaDescribedby,
+    .ANDI508-display-innerText,
+    .ANDI508-display-danger,
+    .ANDI508-display-warning,
+    .ANDI508-display-caution {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* ANDI Colors */
+    .ANDI508-display-ariaLabel { color: #62ff8f !important; }
+    .ANDI508-display-ariaLabelledby { color: #00e741 !important; }
+    .ANDI508-display-ariaDescribedby { color: #12c8f1 !important; }
+    .ANDI508-display-ariaDescription { color: #57F9FF !important; }
+    .ANDI508-display-innerText { color: #d6ffe1 !important; }
+    .ANDI508-display-danger { color: #ff8e67 !important; }
+    .ANDI508-display-warning { color: #ffb74b !important; }
+    .ANDI508-display-caution { color: #ffee7e !important; }
+
+    /* Clean up ANDI images in output if copied */
+    #ANDI508-outputText img { display: none; }
+
     table {
       width: 100%;
       border-collapse: collapse;

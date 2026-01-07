@@ -75,6 +75,9 @@ export async function extractAlerts(page, moduleName) {
                           }
                         } else if (c.text().trim().length > 0) {
                           // For other containers, capture if there is any text
+                          extendedDetails += c.text().trim() + '\n';
+                        }
+                      }
                     }
 
                     // Specific check for Contrast Ratio if not found

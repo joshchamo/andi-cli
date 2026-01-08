@@ -538,7 +538,16 @@
     const rows = Array.from(table.querySelectorAll('tbody tr'));
     rows.forEach(tr => {
         const cells = Array.from(tr.querySelectorAll('td'));
-        const rowData = cells.map(td => td.innerText.trim().replace(/\n/g, ' '));
+        const rowData = cells.map((td, index) => {
+            // For the 'Href' column (index 3), try to get the actual link URL so it works in Excel
+            if (index === 3) {
+                const link = td.querySelector('a');
+                if (link && link.href) {
+                    return link.href;
+                }
+            }
+            return td.innerText.trim().replace(/\n/g, ' ');
+        });
         textToCopy += rowData.join('\t') + '\n';
     });
 

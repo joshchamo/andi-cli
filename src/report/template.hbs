@@ -102,8 +102,16 @@
     /* Clean up ANDI images in output if copied */
     #ANDI508-outputText img { display: none; }
 
-    table {
+    .table-scroll-wrapper {
+      overflow-x: auto;
+      /* Ensure scrollbar is always accessible if content overflows */
       width: 100%;
+    }
+
+    table {
+      width: 100%; 
+      /* Force table to be wide enough to require scrolling */
+      min-width: 1800px; 
       border-collapse: collapse;
       margin-top: 12px;
       background: #1e1e1e;
@@ -111,10 +119,12 @@
       table-layout: fixed;
     }
 
-    th:nth-child(1) { width: 90px; }  /* Severity */
-    th:nth-child(2) { width: 140px; } /* Module */
-    th:nth-child(3) { width: 40%; }   /* Alert */
-    th:nth-child(4) { width: auto; }  /* Element takes remaining */
+    /* Column Widths */
+    th:nth-child(1) { width: 100px; }  /* Severity */
+    th:nth-child(2) { width: 120px; }  /* Module */
+    th:nth-child(3) { width: 300px; }  /* Alert */
+    th:nth-child(4) { width: 700px; }  /* ANDI Output (Doubled+) */
+    th:nth-child(5) { width: auto; }   /* Element (Pushed right) */
 
     th, td {
       padding: 10px 12px;
@@ -402,6 +412,7 @@
   <h2>Detailed Alerts</h2>
 
   <div class="card">
+   <div class="table-scroll-wrapper">
     <table id="alerts-table">
       <thead>
         <tr>
@@ -466,6 +477,7 @@
       {{/each}}
       </tbody>
     </table>
+   </div>
   </div>
 
 </div>

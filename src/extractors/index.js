@@ -246,3 +246,101 @@ export async function extractAlerts(page, moduleName) {
     return [];
   }
 }
+
+/**
+ * Extracts the "Links List" table from ANDI if available (only for Links module).
+ * @param {import('playwright').Page} page
+ * @returns {Promise<Array<{index: string, alerts: string, name: string, href: string}>>}
+ */
+export async function extractLinksList(page) {
+  try {
+    const linksData = await page.evaluate(async () => {
+      // Find 'view links list' button
+      const buttons = Array.from(
+        document.querySelectorAll(
+          '#andiBar button, #ANDI508-additionalPageResults button'
+        )
+      );
+      const listBtn = buttons.find((b) =>
+        b.innerText.toLowerCase().includes('view links list')
+      );
+
+      if (!listBtn) return null;
+
+      // Click it to reveal the table if not already expanded
+      // The button class changes or aria-expanded changes?
+      // "ANDI508-viewOtherResults-button-expanded" class means it is open.
+      if (
+        !listBtn.classList.contains('ANDI508-viewOtherResults-button-expanded')
+      ) {
+        listBtn.click();
+        // Wait for table to appear
+        const waitFor = (ms) => new Promise((r) => setTimeout(r, ms));
+        for (let i = 0; i < 30; i++) {
+          // wait up to 3s
+          const table = document.getElementById('ANDI508-viewList-table');
+          if (table && table.offsetWidth > 0) break;
+          await waitFor(100);
+        }
+      }
+
+      const table = document.getElementById('ANDI508-viewList-table');
+      if (!table) return null;
+
+      const rows = Array.from(table.querySelectorAll('tbody tr'));
+      return rows.map((tr) => {
+        const cells = tr.querySelectorAll('td, th');
+        // Structure: 0:Index, 1:Alerts, 2:Name, 3:Href
+
+        const index = cells[0]?.innerText?.trim() || '';
+
+        // Alerts: Contains images with alt text + visual text
+        const alertCell = cells[1];
+        let alerts = '';
+        if (alertCell) {
+          const imgs = Array.from(alertCell.querySelectorAll('img'));
+          const text = alertCell.innerText.trim();
+          const titles = imgs
+            .map((img) => img.title || img.alt)
+            .filter(Boolean);
+          // If titles exist, combine them.
+          if (titles.length > 0) {
+            alerts = titles.join('; ') + (text ? ' (' + text + ')' : '');
+          } else {
+            alerts = text;
+          }
+        }
+
+        const name = cells[2]?.innerText?.trim() || '';
+
+        // Href Cell: Extract displayed text (could be relative) AND resolved full URL
+        const hrefCell = cells[3];
+        const href = hrefCell?.innerText?.trim() || '';
+        const anchor = hrefCell?.querySelector('a');
+        let resolvedUrl = href; // fallback to text
+
+        if (anchor && anchor.href) {
+          // anchor.href returns the resolved absolute URL in browsers
+          resolvedUrl = anchor.href;
+        } else if (
+          href &&
+          !href.startsWith('http') &&
+          !href.startsWith('//') &&
+          !href.startsWith('mailto:')
+        ) {
+          // Attempt manual resolution just in case, though anchor.href is safer
+          try {
+            resolvedUrl = new URL(href, document.baseURI).href;
+          } catch (e) {}
+        }
+
+        return { index, alerts, name, href, resolvedUrl };
+      });
+    });
+
+    return linksData;
+  } catch (e) {
+    console.warn('Error extracting Links List table:', e.message);
+    return null;
+  }
+}

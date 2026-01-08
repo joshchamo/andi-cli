@@ -69,6 +69,16 @@ The following fields are present in the `issues/*.json` files generated for ever
 - **Description**: Placeholder for Trusted Tester methodology mapping (Future Feature).
 - **Current Value**: Always `""`.
 
+### 10. `linksListTable`
+- **Description**: A captured array of all links found on the page when the "Links/Buttons" module is active.
+- **Source**: Extracted by clicking the "View Links List" button in ANDI (`#ANDI508-viewLinksList-button`) and scraping the resulting table (`#ANDI508-viewList-table`).
+- **Fields**:
+  - `index`: The ANDI link number (e.g., "1").
+  - `alerts`: Combined text of any accessibility alert icons or messages in the row.
+  - `name`: The Accessible Name & Description calculated by ANDI.
+  - `href`: The displayed link text (often relative).
+  - `resolvedUrl`: The fully resolved absolute URL used for clickable links in the report.
+
 ## Data Extraction Logic Flow
 
 1. **Injection**: `andi-scan.js` injects the ANDI bookmarklet scripts.

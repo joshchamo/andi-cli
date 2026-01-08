@@ -408,7 +408,8 @@
           <th class="sortable" onclick="sortTable('alerts-table', 0)">Severity</th>
           <th class="sortable" onclick="sortTable('alerts-table', 1)">Module</th>
           <th class="sortable" onclick="sortTable('alerts-table', 2)">Alert</th>
-          <th class="sortable" onclick="sortTable('alerts-table', 3)">Element</th>
+          <th class="sortable" onclick="sortTable('alerts-table', 3)">ANDI Output</th>
+          <th class="sortable" onclick="sortTable('alerts-table', 4)">Element</th>
         </tr>
       </thead>
 
@@ -429,19 +430,20 @@
           <td>
             <div class="alert-header">
               <div>{{alertMessage}}</div>
-              {{#if alertDetails}}
-                <button class="alert-toggle-btn" onclick="toggleAlert(this)">Show Output</button>
-              {{/if}}
             </div>
-
-            {{#if alertDetails}}
-              <div class="detail muted alert-details-wrapper collapsed">{{{alertDetails}}}</div>
-            {{/if}}
 
             {{#if tt_mapping}}
               <div class="detail small">
                 <strong>Trusted Tester Mapping:</strong> {{tt_mapping}}
               </div>
+            {{/if}}
+          </td>
+
+          <td>
+            {{#if alertDetails}}
+              <div class="detail muted">{{{alertDetails}}}</div>
+            {{else}}
+              <span class="muted">-</span>
             {{/if}}
           </td>
 
@@ -484,15 +486,6 @@
         }
       });
     });
-
-    function toggleAlert(btn) {
-      const row = btn.closest('td');
-      const wrapper = row.querySelector('.alert-details-wrapper');
-      if (wrapper) {
-        wrapper.classList.toggle('collapsed');
-        btn.innerText = wrapper.classList.contains('collapsed') ? 'Show Output' : 'Hide Output';
-      }
-    }
 
     function toggleExpand(btn) {
       const wrapper = btn.closest('.code-block-wrapper');

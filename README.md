@@ -6,6 +6,7 @@ ANDI Scan is a Node.js CLI tool that automates the [ANDI](https://github.com/SSA
 
 - **Automated Injection**: Injects the official ANDI bookmarklet script.
 - **Full Coverage**: Scans all 8 ANDI modules (Focusable Elements, Graphics, Links, Tables, Structures, Color Contrast, Hidden Content, Iframes).
+- **Links List**: Automatically captures the "Links List" table from the Links/Buttons module, including accessibility properties and clickable resolved URLs.
 - **Report Generation**: 
   - **Polished HTML**: Uses Handlebars templating with sortable columns, copyable code snippets, and collapsible details.
   - **CSV Output**: Optional CSV export for data analysis.
@@ -27,7 +28,19 @@ ANDI Scan is a Node.js CLI tool that automates the [ANDI](https://github.com/SSA
 
 ## Usage
 
-Basic scan of a URL:
+**Quick Start via NPM:**
+
+```bash
+npm start -- https://example.com
+```
+
+**Using NPX (No installation required):**
+
+```bash
+npx . https://example.com
+```
+
+**Running from source:**
 
 ```bash
 node ./bin/andi-scan.js https://example.com

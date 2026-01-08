@@ -3,7 +3,7 @@ import path from 'path';
 import chalk from 'chalk';
 import { launchBrowser } from './browser.js';
 import { injectAndi } from './andi-inject.js';
-import { extractAlerts } from './extractors/index.js';
+import { extractAlerts, extractLinksList } from './extractors/index.js';
 import { generateReport } from './report/render.js';
 import { generateCSV } from './report/csv.js';
 
@@ -128,6 +128,7 @@ export async function runScan(url, options) {
     const allAlerts = [];
     const modulesScanned = [];
     const severityBreakdown = { Danger: 0, Warning: 0, Caution: 0 };
+    let linksListTable = null;
 
     for (const modName of modules) {
       console.log(chalk.cyan(`Scanning module: ${modName}...`));
@@ -186,6 +187,19 @@ export async function runScan(url, options) {
           // We'll just try extracting; the extractor checks for jquery/ANDI presence.
           const frameAlerts = await extractAlerts(frame, modName);
           alerts = alerts.concat(frameAlerts);
+        }
+
+        // Capture Links List specific table if applicable
+        if (modName === 'links/buttons') {
+          console.log(chalk.cyan('  Extracting Links List table...'));
+          linksListTable = await extractLinksList(page);
+          if (linksListTable) {
+            console.log(
+              chalk.gray(
+                `  Captured ${linksListTable.length} items in Links List.`
+              )
+            );
+          }
         }
 
         console.log(`  Found ${alerts.length} alerts.`);
@@ -254,6 +268,7 @@ export async function runScan(url, options) {
       totalAlerts: allAlerts.length,
       severityBreakdown,
       modulesScanned,
+      linksListTable,
       topOffenders: {}, // TODO: calculate top offenders
     };
     await fs.writeJson(path.join(runDir, 'SUMMARY.json'), summary, {

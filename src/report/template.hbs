@@ -460,12 +460,7 @@
 
           <td>
             {{#if alertDetails}}
-              <div class="detail muted">
-                {{#if @root.andiOutputIcon}}
-                  <img src="{{@root.andiOutputIcon}}" class="andi-output-icon" alt="" />
-                {{/if}}
-                {{{alertDetails}}}
-              </div>
+              <div class="detail muted">{{{alertDetails}}}</div>
             {{else}}
               <span class="muted">-</span>
             {{/if}}

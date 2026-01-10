@@ -103,6 +103,7 @@ runs/
   - `src/browser.js`: Playwright configuration.
   - `src/andi-inject.js`: Script injection and helper utilities.
   - `src/extractors/`: Logic to extract alerts from the ANDI UI/DOM.
+  - `src/andi-alerts-map.js`: Static dictionary of ANDI Alert messages mapped to their official SSA help documentation URLs. Used to ensure consistently clickable links in reports.
   - `src/report/`: Handlebars templates and rendering logic.
   - `thirdparty/`: Contains the `andi.js` script.
 

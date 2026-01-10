@@ -308,6 +308,14 @@
     .links-details summary:hover {
       background: #333;
     }
+
+    .andi-output-icon {
+      width: 16px; 
+      height: 16px;
+      margin-right: 6px;
+      vertical-align: text-top;
+      display: inline-block;
+    }
     .links-details[open] summary {
       border-bottom: 1px solid #444;
     }
@@ -452,7 +460,12 @@
 
           <td>
             {{#if alertDetails}}
-              <div class="detail muted">{{{alertDetails}}}</div>
+              <div class="detail muted">
+                {{#if @root.andiOutputIcon}}
+                  <img src="{{@root.andiOutputIcon}}" class="andi-output-icon" alt="" />
+                {{/if}}
+                {{{alertDetails}}}
+              </div>
             {{else}}
               <span class="muted">-</span>
             {{/if}}

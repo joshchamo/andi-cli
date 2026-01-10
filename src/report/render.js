@@ -11,6 +11,17 @@ export async function generateReport(summary, alerts, outputPath) {
     path.join(__dirname, 'template.hbs'),
     'utf8'
   );
+
+  // Load and encode the ANDI Output icon
+  let andiOutputIconBase64 = '';
+  try {
+    const iconPath = path.join(__dirname, '../icons/output.png');
+    const iconBuffer = await fs.readFile(iconPath);
+    andiOutputIconBase64 = `data:image/png;base64,${iconBuffer.toString('base64')}`;
+  } catch (e) {
+    console.warn('Warning: Could not load ANDI output icon:', e.message);
+  }
+
   const template = Handlebars.compile(templateSource);
 
   // Register 'eq' helper
@@ -29,6 +40,7 @@ export async function generateReport(summary, alerts, outputPath) {
   const html = template({
     summary: summary,
     issues: sortedAlerts,
+    andiOutputIcon: andiOutputIconBase64,
   });
 
   await fs.outputFile(outputPath, html);

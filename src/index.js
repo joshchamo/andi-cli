@@ -6,6 +6,7 @@ import { injectAndi } from './andi-inject.js';
 import { extractAlerts, extractLinksList } from './extractors/index.js';
 import { generateReport } from './report/render.js';
 import { generateCSV } from './report/csv.js';
+import ANDI_ALERTS from './andi-alerts-map.js';
 
 export async function runScan(url, options) {
   // Generate Run ID
@@ -196,56 +197,69 @@ export async function runScan(url, options) {
           if (linksListTable) {
             // Enrichment: Try to map alert text to help URLs using the main alerts list
             const alertUrlMap = new Map();
-            // Populate map from detailed alerts
-            alerts.forEach(a => {
-                if (a.alertMessage && a.helpUrl) {
-                    alertUrlMap.set(a.alertMessage, a.helpUrl);
-                }
+
+            // 1. Load static definitions (Source of Truth from ANDI TOC)
+            ANDI_ALERTS.forEach((def) => {
+              alertUrlMap.set(def.text, def.link);
+            });
+
+            // 2. Augment with alert instances found on this page (in case of dynamic variations)
+            alerts.forEach((a) => {
+              if (a.alertMessage && a.helpUrl) {
+                alertUrlMap.set(a.alertMessage, a.helpUrl);
+              }
             });
 
             // Helper for fuzzy matching (Jaccard Similarity)
-            const tokenize = (str) => str.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+            const tokenize = (str) =>
+              str
+                .toLowerCase()
+                .replace(/[^a-z0-9\s]/g, '')
+                .split(/\s+/)
+                .filter((w) => w.length > 2);
             const getSimilarity = (s1, s2) => {
-                const tokens1 = new Set(tokenize(s1));
-                const tokens2 = new Set(tokenize(s2));
-                if (tokens1.size === 0 || tokens2.size === 0) return 0;
-                const intersection = new Set([...tokens1].filter(x => tokens2.has(x)));
-                const union = new Set([...tokens1, ...tokens2]);
-                return intersection.size / union.size;
+              const tokens1 = new Set(tokenize(s1));
+              const tokens2 = new Set(tokenize(s2));
+              if (tokens1.size === 0 || tokens2.size === 0) return 0;
+              const intersection = new Set(
+                [...tokens1].filter((x) => tokens2.has(x))
+              );
+              const union = new Set([...tokens1, ...tokens2]);
+              return intersection.size / union.size;
             };
 
             // Apply to Links List
-            linksListTable.forEach(row => {
-                if (row.alerts && row.alerts.length > 0) {
-                    row.alerts.forEach(alertItem => {
-                        if (!alertItem.url && alertItem.message) {
-                            // 1. Try exact match (normalized)
-                            const simpleKey = alertItem.message.trim().toLowerCase();
-                            // In case the map keys are complex, we might miss this, but checking strict equality is cheap
-                            // We loop for fuzzy match anyway, so we can skip strict lookup or do it inside loop.
+            linksListTable.forEach((row) => {
+              if (row.alerts && row.alerts.length > 0) {
+                row.alerts.forEach((alertItem) => {
+                  if (!alertItem.url && alertItem.message) {
+                    // 1. Try exact match (normalized)
+                    const simpleKey = alertItem.message.trim().toLowerCase();
+                    // In case the map keys are complex, we might miss this, but checking strict equality is cheap
+                    // We loop for fuzzy match anyway, so we can skip strict lookup or do it inside loop.
 
-                            let bestUrl = null;
-                            let bestScore = 0;
+                    let bestUrl = null;
+                    let bestScore = 0;
 
-                            for (const [msg, url] of alertUrlMap.entries()) {
-                                const score = getSimilarity(alertItem.message, msg);
-                                if (score > bestScore) {
-                                    bestScore = score;
-                                    bestUrl = url;
-                                }
-                            }
+                    for (const [msg, url] of alertUrlMap.entries()) {
+                      const score = getSimilarity(alertItem.message, msg);
+                      if (score > bestScore) {
+                        bestScore = score;
+                        bestUrl = url;
+                      }
+                    }
 
-                            // Threshold: 0.3 implies about 30% word overlap.
-                            // e.g. "ambiguous same name different href" (5 words)
-                            // "ambiguous link same name description another link different href" (8 words)
-                            // Overlap: ambiguous, same, name, different, href (5 words). 
-                            // Union: 8 words. 5/8 = 0.625. MATCH.
-                            if (bestScore > 0.3) {
-                                alertItem.url = bestUrl;
-                            }
-                        }
-                    });
-                }
+                    // Threshold: 0.3 implies about 30% word overlap.
+                    // e.g. "ambiguous same name different href" (5 words)
+                    // "ambiguous link same name description another link different href" (8 words)
+                    // Overlap: ambiguous, same, name, different, href (5 words).
+                    // Union: 8 words. 5/8 = 0.625. MATCH.
+                    if (bestScore > 0.3) {
+                      alertItem.url = bestUrl;
+                    }
+                  }
+                });
+              }
             });
 
             console.log(

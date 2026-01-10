@@ -11,6 +11,12 @@ export async function generateReport(summary, alerts, outputPath) {
     path.join(__dirname, 'template.hbs'),
     'utf8'
   );
+  
+  // Load CSS
+  const css = await fs.readFile(
+    path.join(__dirname, 'report.css'),
+    'utf8'
+  );
 
   // Load and encode the ANDI Output icon
   let andiOutputIconBase64 = '';
@@ -44,7 +50,10 @@ export async function generateReport(summary, alerts, outputPath) {
   if (andiOutputIconBase64) {
     const iconHtml = `<img src="${andiOutputIconBase64}" class="andi-output-icon" alt="" />`;
     sortedAlerts.forEach((alert) => {
-      if (alert.alertDetails && alert.alertDetails.includes('id="ANDI508-outputText"')) {
+      if (
+        alert.alertDetails &&
+        alert.alertDetails.includes('id="ANDI508-outputText"')
+      ) {
         // Regex to find the opening tag of the output text container
         // It typically looks like: <div id="ANDI508-outputText" ... >
         alert.alertDetails = alert.alertDetails.replace(
@@ -58,6 +67,7 @@ export async function generateReport(summary, alerts, outputPath) {
   const html = template({
     summary: summary,
     issues: sortedAlerts,
+    css: css
     // We no longer pass the icon separately as it is embedded in the alertDetails content
   });
 

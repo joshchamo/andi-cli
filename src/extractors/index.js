@@ -35,6 +35,7 @@ export async function extractAlerts(page, moduleName) {
 
                 // Extract text, handling some common ANDI markup if needed
                 const alertMessage = div.innerText.trim();
+                const helpUrl = div.querySelector('a')?.href || null;
 
                 const sig = `${severityMap[key]}|${alertMessage}`;
                 elementAlertSignatures.add(sig);
@@ -158,6 +159,7 @@ export async function extractAlerts(page, moduleName) {
                   andiModule: modName,
                   severity: severityMap[key],
                   alertMessage: alertMessage,
+                  helpUrl: helpUrl, // Capture HELP URL for mapping
                   alertDetails: finalDetails,
                   elementTag: el.prop('tagName').toLowerCase(),
                   elementId: el.attr('id') || '',
@@ -296,7 +298,7 @@ export async function extractLinksList(page) {
 
         // Alerts: Contains images with alt text + visual text (often wrapped in links)
         const alertCell = cells[1];
-        const alerts = []; 
+        const alerts = [];
 
         if (alertCell) {
           // 1. Try to find alert links (most common for warnings/dangers)
@@ -326,11 +328,11 @@ export async function extractLinksList(page) {
                 alerts.push({ message: msg, url: null });
               });
             }
-            
+
             // Check for potential loose text if not covered above
             const looseText = alertCell.innerText.trim();
             if (looseText && alerts.length === 0) {
-               alerts.push({ message: looseText, url: null });
+              alerts.push({ message: looseText, url: null });
             }
           }
         }

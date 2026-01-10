@@ -1,0 +1,338 @@
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      /* Dark Theme */
+      background: #121212;
+      color: #e0e0e0;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 { margin-bottom: 4px; color: #fff; }
+    h2 { margin-top: 32px; color: #fff; }
+
+    a { color: #58a6ff; }
+    a:visited { color: #8e95ea; }
+
+    .card {
+      /* Dark Theme */
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.3);
+      margin-bottom: 18px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .badge {
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #000; /* Ensure text is readable on colored badges */
+    }
+
+    .danger { background: #ff8e67; }
+    .warning { background: #ffb74b; }
+    .caution { background: #ffee7e; }
+
+    /* ANDI Output Styling */
+    #ANDI508-outputText {
+      background: #000;
+      color: #fff;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 5px;
+      font-family: monospace;
+      border: 1px solid #444;
+    }
+
+    /* Force block display for new lines */
+    .ANDI508-display-ariaLabel,
+    .ANDI508-display-ariaLabelledby,
+    .ANDI508-display-ariaDescription, 
+    .ANDI508-display-ariaDescribedby,
+    .ANDI508-display-innerText,
+    .ANDI508-display-danger,
+    .ANDI508-display-warning,
+    .ANDI508-display-caution {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* ANDI Colors */
+    .ANDI508-display-ariaLabel { color: #62ff8f !important; }
+    .ANDI508-display-ariaLabelledby { color: #00e741 !important; }
+    .ANDI508-display-ariaDescribedby { color: #12c8f1 !important; }
+    .ANDI508-display-ariaDescription { color: #57F9FF !important; }
+    .ANDI508-display-innerText { color: #d6ffe1 !important; }
+    .ANDI508-display-danger { color: #ff8e67 !important; }
+    .ANDI508-display-warning { color: #ffb74b !important; }
+    .ANDI508-display-caution { color: #ffee7e !important; }
+
+    /* Ensure links inside alerts inherit the severity color */
+    .ANDI508-display-danger a,
+    .ANDI508-display-warning a,
+    .ANDI508-display-caution a {
+      color: inherit !important;
+      text-decoration: underline;
+    }
+
+    /* Clean up ANDI images in output if copied */
+    /* #ANDI508-outputText img { display: none; } */ 
+    /* The above rule hides our new icon too! */
+    #ANDI508-outputText img:not(.andi-output-icon) { display: none; }
+
+    .table-scroll-wrapper {
+      overflow-x: auto;
+      /* Ensure scrollbar is always accessible if content overflows */
+      width: 100%;
+    }
+
+    table {
+      width: 100%; 
+      /* Force table to be wide enough to require scrolling */
+      min-width: 1800px; 
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: #1e1e1e;
+      color: #e0e0e0;
+      table-layout: fixed;
+    }
+
+    /* Column Widths */
+    th:nth-child(1) { width: 100px; }  /* Severity */
+    th:nth-child(2) { width: 120px; }  /* Module */
+    th:nth-child(3) { width: 300px; }  /* Alert */
+    th:nth-child(4) { width: 700px; }  /* ANDI Output (Doubled+) */
+    th:nth-child(5) { width: auto; }   /* Element (Pushed right) */
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #333;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+
+    th { 
+      background: #252526; 
+      color: #fff;
+    }
+
+    code {
+      background: #2d2d2d;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      display: inline-block;
+      color: #e6e6e6;
+    }
+
+    pre {
+      overflow-x: auto;
+      background: #2d2d2d;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: .9rem;
+      color: #e6e6e6;
+    }
+
+    .detail {
+      margin-top: 6px;
+      font-size: .9rem;
+      word-break: break-word;
+    }
+
+    .muted { color: #aaa; }
+
+    .small { font-size: .85rem; }
+
+    /* New styles for copyable code blocks */
+    .code-block-wrapper {
+      position: relative;
+      background: #2d2d2d;
+      border-radius: 6px;
+      margin-top: 8px;
+      border: 1px solid #444;
+    }
+
+    .code-block-wrapper pre {
+      margin: 0;
+      padding: 12px;
+      padding-top: 36px; /* Space for button */
+      background: transparent; /* Wrapper handles bg */
+      border: none;
+      border-radius: 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: #e6e6e6;
+    }
+    
+    .code-block-wrapper .code-content {
+      /* Container for pre to handle height properly */
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: #444;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: #fff;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    .copy-btn:hover {
+      background: #505050;
+      border-color: #666;
+    }
+
+    /* Expandable Code Blocks */
+    .code-block-wrapper.collapsed pre {
+      max-height: 160px; /* Show roughly 8-10 lines */
+      overflow: hidden;
+      mask-image: linear-gradient(180deg, black 60%, transparent);
+      -webkit-mask-image: linear-gradient(180deg, black 60%, transparent);
+    }
+    
+    .expand-btn {
+      display: none;
+      width: 100%;
+      text-align: center;
+      background: #252526;
+      border: none;
+      border-top: 1px solid #444;
+      padding: 6px;
+      font-size: 0.8rem;
+      color: #58a6ff;
+      cursor: pointer;
+      border-radius: 0 0 6px 6px;
+    }
+
+    .code-block-wrapper.collapsed .expand-btn {
+      display: block;
+    }
+
+    /* Sortable Headers */
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 24px;
+    }
+    th.sortable:hover {
+      background: #333;
+    }
+    th.sortable::after {
+      content: '↕';
+      position: absolute;
+      right: 8px;
+      color: #666;
+      font-size: 0.8rem;
+    }
+    th.sorted-asc::after { content: '↑'; color: #fff; }
+    th.sorted-desc::after { content: '↓'; color: #fff; }
+
+    /* Alert Collapsibility */
+    .alert-details-wrapper.collapsed #ANDI508-outputContainer {
+      display: none;
+    }
+    
+    .alert-toggle-btn {
+      background: none;
+      border: 1px solid #444;
+      color: #58a6ff;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      cursor: pointer;
+      margin-left: 8px;
+      white-space: nowrap;
+    }
+    .alert-toggle-btn:hover { background: #333; }
+    
+    .alert-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    /* Links List Table */
+    .links-details {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .links-details summary {
+      background: #252526;
+      padding: 15px 20px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      outline: none;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .links-details summary:hover {
+      background: #333;
+    }
+
+    .andi-output-icon {
+      width: 16px; 
+      height: 16px;
+      margin-right: 6px;
+      vertical-align: text-top;
+      display: inline-block;
+    }
+
+    .links-details[open] summary {
+      border-bottom: 1px solid #444;
+    }
+    .links-content {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .links-table {
+      margin-top: 0;
+    }
+    .links-table th { position: sticky; top: 0; z-index: 10; }
+
+    .copy-btn-static {
+      background: #444;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: #fff;
+      margin-left: 10px;
+    }
+    .copy-btn-static:hover {
+      background: #505050;
+    }

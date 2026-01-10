@@ -105,6 +105,7 @@ runs/
   - `src/extractors/`: Logic to extract alerts from the ANDI UI/DOM.
   - `src/andi-alerts-map.js`: Static dictionary of ANDI Alert messages mapped to their official SSA help documentation URLs. Used to ensure consistently clickable links in reports.
   - `src/report/`: Handlebars templates and rendering logic.
+    - `src/report/report.css`: The main stylesheet for the HTML report. Users can customize this file to change the report's appearance.
   - `thirdparty/`: Contains the `andi.js` script.
 
 - **Tuning Selectors**:

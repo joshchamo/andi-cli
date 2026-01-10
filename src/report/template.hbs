@@ -396,8 +396,16 @@
           <tr>
             <td>{{index}}</td>
             <td>
-              {{#if alerts}}
-                <span style="color: #ffb74b;">{{alerts}}</span>
+              {{#if alerts.length}}
+                {{#each alerts}}
+                  <div style="margin-bottom: 2px;">
+                    {{#if url}}
+                      <a href="{{url}}" target="_blank" style="color: #ffb74b; text-decoration: underline;">{{message}}</a>
+                    {{else}}
+                      <span style="color: #ffb74b;">{{message}}</span>
+                    {{/if}}
+                  </div>
+                {{/each}}
               {{else}}
                 <span class="muted">-</span>
               {{/if}}

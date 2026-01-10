@@ -100,7 +100,9 @@
     }
 
     /* Clean up ANDI images in output if copied */
-    #ANDI508-outputText img { display: none; }
+    /* #ANDI508-outputText img { display: none; } */ 
+    /* The above rule hides our new icon too! */
+    #ANDI508-outputText img:not(.andi-output-icon) { display: none; }
 
     .table-scroll-wrapper {
       overflow-x: auto;

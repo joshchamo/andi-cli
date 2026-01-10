@@ -294,20 +294,44 @@ export async function extractLinksList(page) {
 
         const index = cells[0]?.innerText?.trim() || '';
 
-        // Alerts: Contains images with alt text + visual text
+        // Alerts: Contains images with alt text + visual text (often wrapped in links)
         const alertCell = cells[1];
-        let alerts = '';
+        const alerts = []; 
+
         if (alertCell) {
-          const imgs = Array.from(alertCell.querySelectorAll('img'));
-          const text = alertCell.innerText.trim();
-          const titles = imgs
-            .map((img) => img.title || img.alt)
-            .filter(Boolean);
-          // If titles exist, combine them.
-          if (titles.length > 0) {
-            alerts = titles.join('; ') + (text ? ' (' + text + ')' : '');
+          // 1. Try to find alert links (most common for warnings/dangers)
+          const validLinks = Array.from(alertCell.querySelectorAll('a')).filter(
+            (a) => a.href && (a.querySelector('img') || a.innerText.trim())
+          );
+
+          if (validLinks.length > 0) {
+            validLinks.forEach((a) => {
+              const img = a.querySelector('img');
+              const text = a.innerText.trim();
+              const alt = img ? img.title || img.alt : '';
+              // Prefer Image Alt/Title, then Text
+              let message = alt;
+              if (text && !message) message = text;
+              if (text && message && text !== message) message += ` (${text})`;
+              if (!message) message = 'Alert';
+
+              alerts.push({ message, url: a.href });
+            });
           } else {
-            alerts = text;
+            // 2. Fallback: No links, just images or text
+            const imgs = Array.from(alertCell.querySelectorAll('img'));
+            if (imgs.length > 0) {
+              imgs.forEach((img) => {
+                const msg = img.title || img.alt || 'Alert';
+                alerts.push({ message: msg, url: null });
+              });
+            }
+            
+            // Check for potential loose text if not covered above
+            const looseText = alertCell.innerText.trim();
+            if (looseText && alerts.length === 0) {
+               alerts.push({ message: looseText, url: null });
+            }
           }
         }
 

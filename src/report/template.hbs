@@ -100,7 +100,9 @@
     }
 
     /* Clean up ANDI images in output if copied */
-    #ANDI508-outputText img { display: none; }
+    /* #ANDI508-outputText img { display: none; } */ 
+    /* The above rule hides our new icon too! */
+    #ANDI508-outputText img:not(.andi-output-icon) { display: none; }
 
     .table-scroll-wrapper {
       overflow-x: auto;
@@ -308,6 +310,14 @@
     .links-details summary:hover {
       background: #333;
     }
+
+    .andi-output-icon {
+      width: 16px; 
+      height: 16px;
+      margin-right: 6px;
+      vertical-align: text-top;
+      display: inline-block;
+    }
     .links-details[open] summary {
       border-bottom: 1px solid #444;
     }
@@ -386,8 +396,16 @@
           <tr>
             <td>{{index}}</td>
             <td>
-              {{#if alerts}}
-                <span style="color: #ffb74b;">{{alerts}}</span>
+              {{#if alerts.length}}
+                {{#each alerts}}
+                  <div style="margin-bottom: 2px;">
+                    {{#if url}}
+                      <a href="{{url}}" target="_blank" style="color: #ffb74b; text-decoration: underline;">{{message}}</a>
+                    {{else}}
+                      <span style="color: #ffb74b;">{{message}}</span>
+                    {{/if}}
+                  </div>
+                {{/each}}
               {{else}}
                 <span class="muted">-</span>
               {{/if}}

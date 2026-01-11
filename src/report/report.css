@@ -99,3 +99,4 @@ pre { margin: 0; padding: 12px; font-size: 0.85rem; color: #e6e6e6; max-height: 
 .copy-btn, .expand-btn, .copy-btn-static {
   background: #444; color: #fff; border: 1px solid #555; cursor: pointer; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem;
 }
+.screenshot-link { font-size: 0.85rem; color: var(--accent); text-decoration: underline; display: inline-block; margin-top: 4px; }

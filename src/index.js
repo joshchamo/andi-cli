@@ -289,12 +289,19 @@ export async function runScan(url, options) {
                 (await elementHandle.isVisible())
               ) {
                 const screenshotName = `${allAlerts.length + 1}.png`; // Simple incremental name
-                const screenshotPath = path.join(
+                const fullScreenshotPath = path.join(
                   screenshotsDir,
                   screenshotName
                 );
-                await elementHandle.screenshot({ path: screenshotPath });
-                alert.screenshotPath = `screenshots/${screenshotName}`;
+                await elementHandle.screenshot({ path: fullScreenshotPath });
+
+                // Calculate relative path for HTML link and ensure forward slashes for URL compatibility
+                const relativeScreenshotPath = path
+                  .relative(runDir, fullScreenshotPath)
+                  .split(path.sep)
+                  .join('/');
+
+                alert.screenshotPath = relativeScreenshotPath;
               }
             } catch (err) {
               // console.warn("Could not take screenshot for element", alert.andiElementIndex);

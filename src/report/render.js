@@ -11,12 +11,9 @@ export async function generateReport(summary, alerts, outputPath) {
     path.join(__dirname, 'template.hbs'),
     'utf8'
   );
-  
+
   // Load CSS
-  const css = await fs.readFile(
-    path.join(__dirname, 'report.css'),
-    'utf8'
-  );
+  const css = await fs.readFile(path.join(__dirname, 'report.css'), 'utf8');
 
   // Load and encode the ANDI Output icon
   let andiOutputIconBase64 = '';
@@ -67,7 +64,7 @@ export async function generateReport(summary, alerts, outputPath) {
   const html = template({
     summary: summary,
     issues: sortedAlerts,
-    css: css
+    css: css,
     // We no longer pass the icon separately as it is embedded in the alertDetails content
   });
 

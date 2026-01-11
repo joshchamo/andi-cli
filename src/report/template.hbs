@@ -126,12 +126,20 @@
               <div><code>{{elementTag}}</code></div>
               {{#if elementId}}<div class="small muted">#{{elementId}}</div>{{/if}}
               
-              {{#if screenshotPath}}
+              {{#if screenshotData}}
                 <div>
-                  <a href="{{screenshotPath}}" target="_blank" class="screenshot-link">
+                  <a href="data:image/png;base64,{{screenshotData}}" target="_blank" class="screenshot-link">
                     Screenshot of affected element
                   </a>
                 </div>
+              {{else}}
+                {{#if screenshotPath}}
+                  <div>
+                    <a href="{{screenshotPath}}" target="_blank" class="screenshot-link">
+                      Screenshot of affected element
+                    </a>
+                  </div>
+                {{/if}}
               {{/if}}
 
               {{#if elementSnippet}}

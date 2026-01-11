@@ -12,7 +12,7 @@ ANDI Scan is a Node.js CLI tool that automates the [ANDI](https://github.com/SSA
   - **CSV Output**: Optional CSV export for data analysis.
   - **JSON**: Full raw data export.
 - **Cross-Browser**: Supports Chromium, Firefox, and WebKit.
-- **Screenshots**: Optionally captures screenshots of failing elements.
+- **Screenshots**: Optionally captures screenshots of failing elements and provides direct links in the report.
 
 ## Installation
 

@@ -125,6 +125,15 @@
             <td data-label="Element">
               <div><code>{{elementTag}}</code></div>
               {{#if elementId}}<div class="small muted">#{{elementId}}</div>{{/if}}
+              
+              {{#if screenshotPath}}
+                <div style="margin: 6px 0;">
+                  <a href="{{screenshotPath}}" target="_blank" style="font-size: 0.85rem; color: #58a6ff; text-decoration: underline;">
+                    Screenshot of affected element
+                  </a>
+                </div>
+              {{/if}}
+
               {{#if elementSnippet}}
                 <div class="code-block-wrapper">
                   <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>

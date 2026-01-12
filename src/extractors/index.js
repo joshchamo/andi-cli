@@ -36,97 +36,16 @@ export async function extractAlerts(page, moduleName) {
                 // Extract text, handling some common ANDI markup if needed
                 const alertMessage = div.innerText.trim();
                 const helpUrl = div.querySelector('a')?.href || null;
-                const groupId = div.querySelector('a')?.getAttribute('data-andi-group') || null;
+                const groupId =
+                  div.querySelector('a')?.getAttribute('data-andi-group') ||
+                  null;
 
                 const sig = `${severityMap[key]}|${alertMessage}`;
                 elementAlertSignatures.add(sig);
 
-                // Attempt to capture extended details via ANDI Inspector
-                let extendedDetails = '';
-                try {
-                  if (
-                    window.AndiModule &&
-                    typeof window.AndiModule.inspect === 'function'
-                  ) {
-                    window.AndiModule.inspect(el);
-
-                    // Dynamic search for detailed info (e.g., Contrast Ratio)
-                    const container = $('#ANDI508');
-                    // We look for text that changes based on inspection.
-                    // For contrast, "Contrast Ratio" is a key indicator.
-                    // For others, we might just grab the "Active Element" section.
-
-                    // Strategy: Look for the 'accessible name' or 'output' container
-                    const likelyContainers = [
-                      '#ANDI508-additionalPage',
-                      '#ANDI508-alertList',
-                      '#ANDI508-elementDetails',
-                    ];
-
-                    for (const sel of likelyContainers) {
-                      const c = $(sel);
-                      // Strict length check can miss short but critical output like "Active Element"
-                      // ANDI Output container is critical, so we check specifically for it
-                      if (c.length) {
-                        if (sel === '#ANDI508-elementDetails') {
-                          // Capture HTML for Element Details to preserve styling/structure
-                          // We ensure meaningful content by checking if it contains the Output Container or Components Table
-                          if (
-                            c.find('#ANDI508-outputText').length ||
-                            c.find('#ANDI508-accessibleComponentsTable').length
-                          ) {
-                            // Clone to modify structure without affecting live page
-                            const clone = c.clone();
-                            // Remove redundant element name info (tag/id) as we show this in the report column
-                            clone
-                              .find('#ANDI508-elementNameContainer')
-                              .remove();
-                            // Remove empty additional details if legitimate empty
-                            if (
-                              clone
-                                .find('#ANDI508-additionalElementDetails')
-                                .text()
-                                .trim().length === 0
-                            ) {
-                              clone
-                                .find('#ANDI508-additionalElementDetails')
-                                .remove();
-                            }
-
-                            let html = clone.html();
-                            extendedDetails += html + '\n';
-                          }
-                        } else if (c.text().trim().length > 0) {
-                          // For other containers, capture if there is any text
-                          extendedDetails += c.text().trim() + '\n';
-                        }
-                      }
-                    }
-
-                    // Specific check for Contrast Ratio if not found
-                    if (
-                      !extendedDetails.includes('Contrast Ratio') &&
-                      modName === 'color contrast'
-                    ) {
-                      container.find('*').each(function () {
-                        const t = $(this).text();
-                        if (
-                          t.includes('Contrast Ratio:') &&
-                          $(this).children().length === 0
-                        ) {
-                          // Found a leaf node or close to it
-                          extendedDetails += $(this).parent().text().trim(); // Capture context
-                        }
-                      });
-                    }
-                  }
-                } catch (e) {}
-
-                const finalDetails =
-                  extendedDetails &&
-                  extendedDetails.length > alertMessage.length
-                    ? extendedDetails
-                    : alertContent;
+                // SKIP capturing "extended details" via ANDI Inspector to keep JSON clean.
+                // The user specifically requested removal of #ANDI508-accessibleComponentsTableContainer etc.
+                const finalDetails = ''; // or alertContent if we want the redundancy
 
                 // Create Clean Snippet
                 let cleanSnippet = el.prop('outerHTML');
@@ -206,9 +125,10 @@ export async function extractAlerts(page, moduleName) {
                 // Normalize message same as Element loop
                 const div = document.createElement('div');
                 div.innerHTML = msg;
-                const groupId = div.querySelector('a')?.getAttribute('data-andi-group') || null;
+                const groupId =
+                  div.querySelector('a')?.getAttribute('data-andi-group') ||
+                  null;
                 msg = div.innerText.trim();
-                
 
                 // Check strict element signature first
                 // Use ELEMENT prefix because we want to exclude things found on elements

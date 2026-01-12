@@ -3745,6 +3745,7 @@ function AndiAlerter(){
 	//This private function will add a help link to the alert message
 	function messageWithHelpLink(alertObject, message){
 		return "<a href='"+ help_url + "alerts.html?" + alertObject.info +"' target='_blank' "+
+			"data-andi-group='"+(alertObject.group||"")+"' " + 
 			"aria-label='"+alertObject.level+": "+message+" Select to Open ANDI Help"+"'>"+
 			"<img alt='"+alertObject.level+"' title='Get more info about this' role='presentation' src='"+icons_url+alertObject.level+".png' />"+
 			message+"</a> ";

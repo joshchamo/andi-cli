@@ -36,6 +36,7 @@ export async function extractAlerts(page, moduleName) {
                 // Extract text, handling some common ANDI markup if needed
                 const alertMessage = div.innerText.trim();
                 const helpUrl = div.querySelector('a')?.href || null;
+                const groupId = div.querySelector('a')?.getAttribute('data-andi-group') || null;
 
                 const sig = `${severityMap[key]}|${alertMessage}`;
                 elementAlertSignatures.add(sig);
@@ -160,6 +161,7 @@ export async function extractAlerts(page, moduleName) {
                   severity: severityMap[key],
                   alertMessage: alertMessage,
                   helpUrl: helpUrl, // Capture HELP URL for mapping
+                  groupId: groupId,
                   alertDetails: finalDetails,
                   elementTag: el.prop('tagName').toLowerCase(),
                   elementId: el.attr('id') || '',
@@ -204,7 +206,9 @@ export async function extractAlerts(page, moduleName) {
                 // Normalize message same as Element loop
                 const div = document.createElement('div');
                 div.innerHTML = msg;
+                const groupId = div.querySelector('a')?.getAttribute('data-andi-group') || null;
                 msg = div.innerText.trim();
+                
 
                 // Check strict element signature first
                 // Use ELEMENT prefix because we want to exclude things found on elements
@@ -225,6 +229,7 @@ export async function extractAlerts(page, moduleName) {
                     andiModule: modName,
                     severity: severityMap[key],
                     alertMessage: msg,
+                    groupId: groupId,
                     alertDetails: item.toString(), // Keep original for details
                     elementTag: 'PAGE',
                     elementId: '',

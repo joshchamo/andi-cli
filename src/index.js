@@ -289,12 +289,23 @@ export async function runScan(url, options) {
                 (await elementHandle.isVisible())
               ) {
                 const screenshotName = `${allAlerts.length + 1}.png`; // Simple incremental name
-                const screenshotPath = path.join(
+                const fullScreenshotPath = path.join(
                   screenshotsDir,
                   screenshotName
                 );
-                await elementHandle.screenshot({ path: screenshotPath });
-                alert.screenshotPath = `screenshots/${screenshotName}`;
+                // Capture screenshot to disk and get buffer for embedding
+                const screenshotBuffer = await elementHandle.screenshot({
+                  path: fullScreenshotPath,
+                });
+
+                // Calculate relative path for HTML link and ensure forward slashes for URL compatibility
+                const relativeScreenshotPath = path
+                  .relative(runDir, fullScreenshotPath)
+                  .split(path.sep)
+                  .join('/');
+
+                alert.screenshotPath = relativeScreenshotPath;
+                alert.screenshotData = screenshotBuffer.toString('base64');
               }
             } catch (err) {
               // console.warn("Could not take screenshot for element", alert.andiElementIndex);
@@ -323,7 +334,14 @@ export async function runScan(url, options) {
       // Add browser info to individual issue
       alert.browserUsed = options.browser;
       const filename = String(issueCounter).padStart(9, '0') + '.json';
-      await fs.writeJson(path.join(issuesDir, filename), alert, { spaces: 2 });
+
+      // Create a clean copy for JSON output (exclude heavy base64 data)
+      const alertForJson = { ...alert };
+      delete alertForJson.screenshotData;
+
+      await fs.writeJson(path.join(issuesDir, filename), alertForJson, {
+        spaces: 2,
+      });
     }
 
     // Write Summary

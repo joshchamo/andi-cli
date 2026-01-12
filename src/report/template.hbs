@@ -3,9 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>ANDI Scan Report – {{summary.runId}}</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <style>
     {{{css}}}
   </style>
@@ -14,71 +12,142 @@
 <body>
 <div class="container">
 
-  <!-- HEADER -->
-  <div class="card">
+  <header class="card" role="banner">
     <h1>ANDI Scan Report</h1>
-
-    <div class="meta-grid small">
+    <div class="meta-grid">
       <div><strong>Run ID:</strong> {{summary.runId}}</div>
-      <div><strong>URL:</strong> <a href="{{summary.url}}" target="_blank">{{summary.url}}</a></div>
+      <div><strong>URL:</strong> <a href="{{summary.url}}" target="_blank" rel="noopener">{{summary.url}}</a></div>
       <div><strong>Timestamp:</strong> {{summary.timestamp}}</div>
       <div><strong>Browser:</strong> {{summary.browserUsed}}</div>
     </div>
-
-    <hr>
-
-    <div class="small">
+    <hr class="divider">
+    <div class="summary-stats">
       <strong>Total Alerts:</strong> {{summary.totalAlerts}}
       &nbsp;&nbsp;
       <span class="badge danger">Danger: {{summary.severityBreakdown.Danger}}</span>
       <span class="badge warning">Warning: {{summary.severityBreakdown.Warning}}</span>
       <span class="badge caution">Caution: {{summary.severityBreakdown.Caution}}</span>
     </div>
-  </div>
+  </header>
 
-  <!-- LINKS LIST TABLE -->
   {{#if summary.linksListTable}}
-  <h2>Links List</h2>
-  <details class="links-details" open>
-    <summary>
-      <span>Links Found: {{summary.linksListTable.length}} (Click to Toggle)</span>
-      <button class="copy-btn-static" onclick="copyLinksTable(this, event)">Copy Table</button>
-    </summary>
-    <div class="links-content">
-      <table id="links-table" class="links-table">
+  <section aria-labelledby="links-heading">
+    <h2 id="links-heading">Links List</h2>
+    <details class="links-details" open>
+      <summary>
+        <span>Links Found: {{summary.linksListTable.length}} (Click to Toggle)</span>
+        <button class="copy-btn-static" onclick="copyLinksTable(this, event)">Copy Table</button>
+      </summary>
+      <div class="table-scroll-wrapper">
+        <table id="links-table">
+          <thead>
+            <tr>
+              <th scope="col" style="width: 60px;">#</th>
+              <th scope="col" style="width: 200px;">Alerts</th>
+              <th scope="col">Accessible Name</th>
+              <th scope="col">Href</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each summary.linksListTable}}
+            <tr>
+              <td data-label="#">{{index}}</td>
+              <td data-label="Alerts">
+                {{#if alerts.length}}
+                  {{#each alerts}}
+                    <div class="andi-link-alert {{level}}">
+                      {{#if url}}
+                        <a href="{{url}}" target="_blank" rel="noopener">{{message}}</a>
+                      {{else}}
+                        <span>{{message}}</span>
+                      {{/if}}
+                    </div>
+                  {{/each}}
+                {{else}}
+                  <span class="muted">-</span>
+                {{/if}}
+              </td>
+              <td data-label="Accessible Name">{{name}}</td>
+              <td data-label="Href">
+                {{#if href}}
+                  <a href="{{resolvedUrl}}" target="_blank" rel="noopener" class="href-link"><code>{{href}}</code></a>
+                {{else}}
+                  <span class="muted">-</span>
+                {{/if}}
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+  {{/if}}
+
+  <section aria-labelledby="alerts-heading">
+    <h2 id="alerts-heading">Detailed Alerts</h2>
+    <div class="table-scroll-wrapper">
+      <table id="alerts-table">
         <thead>
           <tr>
-            <th style="width: 60px;">#</th>
-            <th style="width: 200px;">Alerts</th>
-            <th style="width: 30%;">Accessible Name</th>
-            <th>Href</th>
+            <th class="sortable" onclick="sortTable('alerts-table', 0)">Severity</th>
+            <th class="sortable" onclick="sortTable('alerts-table', 1)">Module</th>
+            <th class="sortable" onclick="sortTable('alerts-table', 2)">Alert</th>
+            <th class="sortable" onclick="sortTable('alerts-table', 3)">ANDI Output</th>
+            <th class="sortable" onclick="sortTable('alerts-table', 4)">Element</th>
           </tr>
         </thead>
         <tbody>
-          {{#each summary.linksListTable}}
+          {{#each issues}}
           <tr>
-            <td>{{index}}</td>
-            <td>
-              {{#if alerts.length}}
-                {{#each alerts}}
-                  <div style="margin-bottom: 2px;">
-                    {{#if url}}
-                      <a href="{{url}}" target="_blank" style="color: #ffb74b; text-decoration: underline;">{{message}}</a>
-                    {{else}}
-                      <span style="color: #ffb74b;">{{message}}</span>
-                    {{/if}}
-                  </div>
-                {{/each}}
+            <td data-label="Severity">
+              <span class="badge 
+                {{#if (eq severity "Danger")}}danger{{/if}}
+                {{#if (eq severity "Warning")}}warning{{/if}}
+                {{#if (eq severity "Caution")}}caution{{/if}}">
+                {{severity}}
+              </span>
+            </td>
+            <td data-label="Module">{{andiModule}}</td>
+            <td data-label="Alert">
+              <div class="alert-header">{{alertMessage}}</div>
+              {{#if tt_mapping}}
+                <div class="detail small"><strong>Trusted Tester:</strong> {{tt_mapping}}</div>
+              {{/if}}
+            </td>
+            <td data-label="ANDI Output">
+              {{#if alertDetails}}
+                <div class="detail muted">{{{alertDetails}}}</div>
               {{else}}
                 <span class="muted">-</span>
               {{/if}}
             </td>
-            <td>{{name}}</td>
-            <td>
-              {{#if href}}
-                <a href="{{resolvedUrl}}" target="_blank"><code>{{href}}</code></a>
+            <td data-label="Element">
+              <div><code>{{elementTag}}</code></div>
+              {{#if elementId}}<div class="small muted">#{{elementId}}</div>{{/if}}
+              
+              {{#if screenshotData}}
+                <div>
+                  <a href="data:image/png;base64,{{screenshotData}}" target="_blank" class="screenshot-link">
+                    Screenshot of affected element
+                  </a>
+                </div>
               {{else}}
-                <span class="muted">-</span>
+                {{#if screenshotPath}}
+                  <div>
+                    <a href="{{screenshotPath}}" target="_blank" class="screenshot-link">
+                      Screenshot of affected element
+                    </a>
+                  </div>
+                {{/if}}
+              {{/if}}
+
+              {{#if elementSnippet}}
+                <div class="code-block-wrapper">
+                  <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                  <div class="code-content"><pre>{{elementSnippet}}</pre></div>
+                  <button class="expand-btn" onclick="toggleExpand(this)">Show more</button>
+                </div>
               {{/if}}
             </td>
           </tr>
@@ -86,239 +155,73 @@
         </tbody>
       </table>
     </div>
-  </details>
-  {{/if}}
-
-  <!-- DETAILED ALERTS -->
-  <h2>Detailed Alerts</h2>
-
-  <div class="card">
-   <div class="table-scroll-wrapper">
-    <table id="alerts-table">
-      <thead>
-        <tr>
-          <th class="sortable" onclick="sortTable('alerts-table', 0)">Severity</th>
-          <th class="sortable" onclick="sortTable('alerts-table', 1)">Module</th>
-          <th class="sortable" onclick="sortTable('alerts-table', 2)">Alert</th>
-          <th class="sortable" onclick="sortTable('alerts-table', 3)">ANDI Output</th>
-          <th class="sortable" onclick="sortTable('alerts-table', 4)">Element</th>
-        </tr>
-      </thead>
-
-      <tbody>
-      {{#each issues}}
-        <tr>
-          <td>
-            <span class="badge
-              {{#if (eq severity "Danger")}}danger{{/if}}
-              {{#if (eq severity "Warning")}}warning{{/if}}
-              {{#if (eq severity "Caution")}}caution{{/if}}">
-              {{severity}}
-            </span>
-          </td>
-
-          <td>{{andiModule}}</td>
-
-          <td>
-            <div class="alert-header">
-              <div>{{alertMessage}}</div>
-            </div>
-
-            {{#if tt_mapping}}
-              <div class="detail small">
-                <strong>Trusted Tester Mapping:</strong> {{tt_mapping}}
-              </div>
-            {{/if}}
-          </td>
-
-          <td>
-            {{#if alertDetails}}
-              <div class="detail muted">{{{alertDetails}}}</div>
-            {{else}}
-              <span class="muted">-</span>
-            {{/if}}
-          </td>
-
-          <td>
-            <div><code>{{elementTag}}</code></div>
-
-            {{#if elementId}}
-              <div class="small muted">#{{elementId}}</div>
-            {{/if}}
-
-            {{#if elementSnippet}}
-              <div class="code-block-wrapper">
-                <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-                <div class="code-content"><pre>{{elementSnippet}}</pre></div>
-                <button class="expand-btn" onclick="toggleExpand(this)">Show more</button>
-              </div>
-            {{/if}}
-          </td>
-        </tr>
-      {{/each}}
-      </tbody>
-    </table>
-   </div>
-  </div>
+  </section>
 
 </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Initialize code blocks
-      const wrappers = document.querySelectorAll('.code-block-wrapper');
-      wrappers.forEach(wrapper => {
-        const pre = wrapper.querySelector('pre');
-        // Check if content height is significant (approx 160px is our collapsed height)
-        if (pre.scrollHeight > 180) {
-          wrapper.classList.add('collapsed');
-        } else {
-          // Hide expand button for short snippets
-          const btn = wrapper.querySelector('.expand-btn');
-          if(btn) btn.style.display = 'none';
-        }
-      });
+<script>
+  // Preservation of all original script logic (Sort, Copy, Expand)
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.code-block-wrapper').forEach(wrapper => {
+      const pre = wrapper.querySelector('pre');
+      if (pre.scrollHeight > 180) wrapper.classList.add('collapsed');
+      else { const btn = wrapper.querySelector('.expand-btn'); if(btn) btn.style.display = 'none'; }
     });
+  });
 
-    function toggleExpand(btn) {
-      const wrapper = btn.closest('.code-block-wrapper');
-      wrapper.classList.toggle('collapsed');
-      btn.innerText = wrapper.classList.contains('collapsed') ? 'Show more' : 'Show less';
-    }
+  function toggleExpand(btn) {
+    const wrapper = btn.closest('.code-block-wrapper');
+    wrapper.classList.toggle('collapsed');
+    btn.innerText = wrapper.classList.contains('collapsed') ? 'Show more' : 'Show less';
+  }
 
   function copyToClipboard(btn) {
-    const wrapper = btn.closest('.code-block-wrapper');
-    const codeBlock = wrapper.querySelector('pre'); 
-    const text = codeBlock.innerText;
-
+    const text = btn.closest('.code-block-wrapper').querySelector('pre').innerText;
     navigator.clipboard.writeText(text).then(() => {
-      const originalText = btn.innerText;
+      const original = btn.innerText;
       btn.innerText = 'Copied!';
-      btn.style.background = '#d4edda';
-      btn.style.borderColor = '#c3e6cb';
-      
-      setTimeout(() => {
-        btn.innerText = originalText;
-        btn.style.background = '';
-        btn.style.borderColor = '';
-      }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy:', err);
-      btn.innerText = 'Error';
+      setTimeout(() => btn.innerText = original, 2000);
     });
   }
 
-  function copyLinksTable(btn, e) {
-    if(e) e.stopPropagation();
-
-    const table = document.getElementById('links-table');
-    if (!table) return;
-
-    let textToCopy = '';
-    
-    // Headers
-    const headers = Array.from(table.querySelectorAll('th')).map(th => th.innerText.trim());
-    textToCopy += headers.join('\t') + '\n';
-
-    // Rows
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
-    rows.forEach(tr => {
-        const cells = Array.from(tr.querySelectorAll('td'));
-        const rowData = cells.map((td, index) => {
-            // For the 'Href' column (index 3), try to get the actual link URL so it works in Excel
-            if (index === 3) {
-                const link = td.querySelector('a');
-                if (link && link.href) {
-                    return link.href;
-                }
-            }
-            return td.innerText.trim().replace(/\n/g, ' ');
-        });
-        textToCopy += rowData.join('\t') + '\n';
-    });
-
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        const originalText = btn.innerText;
-        btn.innerText = 'Copied!';
-        btn.style.background = '#d4edda';
-        btn.style.borderColor = '#c3e6cb';
-        btn.style.color = '#155724';
-        
-        setTimeout(() => {
-          btn.innerText = originalText;
-          btn.style.background = '';
-          btn.style.borderColor = '';
-          btn.style.color = '';
-        }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy table:', err);
-    });
-  }
-
-  // Sorting Logic
   function sortTable(tableId, n) {
     const table = document.getElementById(tableId);
-    let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-    switching = true;
-    dir = "asc"; 
-    
-    // Reset arrows
-    table.querySelectorAll("th").forEach(th => {
-      th.classList.remove("sorted-asc", "sorted-desc");
-    });
-    
-    // Set arrow for current header
-    const headers = table.querySelectorAll("th");
-    
+    let rows, switching = true, i, x, y, shouldSwitch, dir = "asc", switchcount = 0;
+    table.querySelectorAll("th").forEach(th => th.classList.remove("sorted-asc", "sorted-desc"));
     while (switching) {
-      switching = false;
-      rows = table.rows;
-      
-      // rows[0] is header, so start at 1
+      switching = false; rows = table.rows;
       for (i = 1; i < (rows.length - 1); i++) {
         shouldSwitch = false;
         x = rows[i].getElementsByTagName("TD")[n];
         y = rows[i + 1].getElementsByTagName("TD")[n];
-        
-        let xVal = x.textContent.trim().toLowerCase();
-        let yVal = y.textContent.trim().toLowerCase();
-        
-        // Special weighting for Severity (Column 0)
+        let xV = x.textContent.trim().toLowerCase(), yV = y.textContent.trim().toLowerCase();
         if (n === 0) {
-           const severityWeight = { 'danger': 3, 'warning': 2, 'caution': 1 };
-           xVal = severityWeight[xVal] || 0;
-           yVal = severityWeight[yVal] || 0;
+          const weight = { 'danger': 3, 'warning': 2, 'caution': 1 };
+          xV = weight[xV] || 0; yV = weight[yV] || 0;
         }
-
-        if (dir === "asc") {
-          if (xVal > yVal) {
-            shouldSwitch = true;
-            break;
-          }
-        } else if (dir === "desc") {
-          if (xVal < yVal) {
-            shouldSwitch = true;
-            break;
-          }
-        }
+        if ((dir === "asc" && xV > yV) || (dir === "desc" && xV < yV)) { shouldSwitch = true; break; }
       }
-      
-      if (shouldSwitch) {
-        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-        switching = true;
-        switchcount ++;      
-      } else {
-        if (switchcount === 0 && dir === "asc") {
-          dir = "desc";
-          switching = true;
-        }
-      }
+      if (shouldSwitch) { rows[i].parentNode.insertBefore(rows[i + 1], rows[i]); switching = true; switchcount++; }
+      else if (switchcount === 0 && dir === "asc") { dir = "desc"; switching = true; }
     }
-    
-    // Update header class
-    headers[n].classList.add(dir === "asc" ? "sorted-asc" : "sorted-desc");
+    table.querySelectorAll("th")[n].classList.add(dir === "asc" ? "sorted-asc" : "sorted-desc");
+  }
+
+  function copyLinksTable(btn, e) {
+    if(e) e.stopPropagation();
+    const table = document.getElementById('links-table');
+    let text = Array.from(table.querySelectorAll('th')).map(th => th.innerText.trim()).join('\t') + '\n';
+    table.querySelectorAll('tbody tr').forEach(tr => {
+      text += Array.from(tr.querySelectorAll('td')).map((td, i) => {
+        if (i === 3) { const a = td.querySelector('a'); if (a) return a.href; }
+        return td.innerText.trim().replace(/\n/g, ' ');
+      }).join('\t') + '\n';
+    });
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.innerText; btn.innerText = 'Copied!';
+      setTimeout(() => btn.innerText = orig, 2000);
+    });
   }
 </script>
-
 </body>
 </html>

@@ -283,12 +283,12 @@ export async function runScan(url, options) {
         for (const alert of alerts) {
           // Flatten group ID to Name
           if (alert.groupId !== null && alert.groupId !== undefined) {
-             const gIndex = parseInt(alert.groupId, 10);
-             if (!isNaN(gIndex) && ANDI_AlertGroups[gIndex]) {
-               alert.groupName = ANDI_AlertGroups[gIndex];
-             } else {
-               alert.groupName = 'Unknown Group';
-             }
+            const gIndex = parseInt(alert.groupId, 10);
+            if (!isNaN(gIndex) && ANDI_AlertGroups[gIndex]) {
+              alert.groupName = ANDI_AlertGroups[gIndex];
+            } else {
+              alert.groupName = 'Unknown Group';
+            }
           }
 
           // Screenshot logic
@@ -342,6 +342,8 @@ export async function runScan(url, options) {
 
     // Write Issues
     let issueCounter = 0;
+    const allCleanIssues = [];
+
     for (const alert of allAlerts) {
       issueCounter++;
       // Add browser info to individual issue
@@ -352,10 +354,17 @@ export async function runScan(url, options) {
       const alertForJson = { ...alert };
       delete alertForJson.screenshotData;
 
+      allCleanIssues.push(alertForJson);
+
       await fs.writeJson(path.join(issuesDir, filename), alertForJson, {
         spaces: 2,
       });
     }
+
+    // Write aggregated issues file
+    await fs.writeJson(path.join(issuesDir, 'all_issues.json'), allCleanIssues, {
+      spaces: 2,
+    });
 
     // Write Summary
     const summary = {
@@ -376,20 +385,20 @@ export async function runScan(url, options) {
 
     // Console Output - Modules Group Summary
     const finalGroupStats = {};
-    allAlerts.forEach(a => {
-        if(a.groupName) {
-            finalGroupStats[a.groupName] = (finalGroupStats[a.groupName] || 0) + 1;
-        }
+    allAlerts.forEach((a) => {
+      if (a.groupName) {
+        finalGroupStats[a.groupName] = (finalGroupStats[a.groupName] || 0) + 1;
+      }
     });
 
     if (Object.keys(finalGroupStats).length > 0) {
-        console.log('\n' + chalk.bold.underline('Alert group summary:'));
-        Object.entries(finalGroupStats)
-            .sort(([,a], [,b]) => b - a) // Sort by count descending
-            .forEach(([name, count]) => {
-                console.log(`  ${name}: ${chalk.yellow(count)}`);
-            });
-        console.log(''); // spacer
+      console.log('\n' + chalk.bold.underline('Alert group summary:'));
+      Object.entries(finalGroupStats)
+        .sort(([, a], [, b]) => b - a) // Sort by count descending
+        .forEach(([name, count]) => {
+          console.log(`  ${name}: ${chalk.yellow(count)}`);
+        });
+      console.log(''); // spacer
     }
 
     // Generate Report

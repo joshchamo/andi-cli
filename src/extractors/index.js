@@ -13,8 +13,153 @@ export async function extractAlerts(page, moduleName) {
 
       // 1. Element-Level Alerts (requires jQuery as ANDI uses it)
       if ($) {
+        // --- bestSelector Generator Logic ---
+        const getBestSelector = (el, $el) => {
+          // Tier 0: ID
+          const id = $el.attr('id');
+          if (id && id.trim().length > 0) {
+            return `#${id.trim()}`;
+          }
+
+          // Tier 1: data-testid
+          const testId = $el.attr('data-testid');
+          if (testId && testId.trim().length > 0) {
+            return `[data-testid="${testId.trim()}"]`;
+          }
+
+          // Tier 2: Classes
+          // Filter out: >3 digits, auto-generated (hash-like), utility classes
+          const rawClass = $el.attr('class') || '';
+          // We must strip ANDI classes first because they are injected by the tool
+          const classes = rawClass
+            .split(/\s+/)
+            .filter((c) => !c.startsWith('ANDI508-') && c.trim().length > 0)
+            .filter((c) => {
+              // 1. More than 3 digits?
+              const digitCount = (c.match(/\d/g) || []).length;
+              if (digitCount > 3) return false;
+
+              // 2. Auto-generated / Hash-like? (e.g. 8+ chars and look random?)
+              // Heuristic: mixed case alpha-num with numbers, long length
+              // Simple check: "looks like UUID or hash"
+              // e.g. "x1Y-9a_b"
+              // Let's rely on length + digit mixing for likely hashes if not caught by digitCount
+              // But 'col-md-12' is fine.
+              // 'css-1j23kl' (emotion) is often caught by starting with specific prefixes if known,
+              // but general purpose:
+              // If it's very long (> 20) it's suspicious.
+              if (c.length > 30) return false;
+
+              // 3. Utility-only check (common list)
+              const utilityPrefixes = [
+                'flex',
+                'grid',
+                'block',
+                'inline',
+                'hidden',
+                'visible',
+                'text-',
+                'bg-',
+                'p-',
+                'm-',
+                'w-',
+                'h-',
+                'items-',
+                'justify-',
+                'gap-',
+                'border',
+                'rounded',
+                'absolute',
+                'relative',
+                'fixed',
+                'top-',
+                'left-',
+              ];
+              if (utilityPrefixes.some((p) => c.startsWith(p))) return false;
+              if (
+                ['row', 'col', 'container', 'wrapper'].includes(c.toLowerCase())
+              )
+                return false;
+
+              return true;
+            });
+
+          if (classes.length > 0) {
+            // Prefer 1 to 3 classes
+            // We take the first ones that survived filtering
+            return '.' + classes.slice(0, 3).join('.');
+          }
+
+          // Tier 3: Restricted Attributes
+          // Priority: aria-label, role, type, name
+          const attributes = ['aria-label', 'role', 'type', 'name'];
+          for (const attr of attributes) {
+            const val = $el.attr(attr);
+            if (val && val.trim().length > 0) {
+              // Avoid analytics/tracking values
+              if (
+                /track|analytics|_sp|metric/i.test(attr) ||
+                /track|analytics|_sp|metric/i.test(val)
+              ) {
+                continue;
+              }
+              const tagName = el.tagName.toLowerCase();
+              // Escape double quotes in value
+              const safeVal = val.replace(/"/g, '\\"');
+              return `${tagName}[${attr}="${safeVal}"]`;
+            }
+          }
+
+          // Tier 4: Structural Context
+          // Try to get parent's best selector + child combinator
+          // We limit recursion to 1 level to "Never exceed one > combinator" constraint (sort of)
+          // Actually, if we call getBestSelector on parent, it might return a class.
+          // We want: ParentSelector > ChildSelector
+          // Child selector logic here needs to fallback to Tag + :nth-child
+          const parent = $el.parent();
+          if (parent.length && parent[0].tagName !== 'BODY') {
+            // Avoid infinite recursion or deep chains.
+            // We strictly manually generate parent selector using Tier 0-2 (ID, TestID, Class) for the parent
+            // If parent has no good ID/Class, we might abort to avoid complex chains.
+            // But strict requirement says "Extract a single parent selector using the same tier rules".
+            // So we can extract parent selector.
+            let parentSelector = '';
+            const pId = parent.attr('id');
+            const pTestId = parent.attr('data-testid');
+            const pClassRaw = parent.attr('class') || '';
+            const pClasses = pClassRaw
+              .split(/\s+/)
+              .filter((c) => !c.startsWith('ANDI508-'))
+              .filter((c) => (c.match(/\d/g) || []).length <= 3); // minimal filter
+
+            if (pId) parentSelector = `#${pId}`;
+            else if (pTestId) parentSelector = `[data-testid="${pTestId}"]`;
+            else if (pClasses.length > 0) parentSelector = `.${pClasses[0]}`;
+            // If parent has no good selector, we might use tag name?
+            else parentSelector = parent[0].tagName.toLowerCase();
+
+            // Now child part (current element)
+            // Since we failed Tier 2 (classes) and Tier 3 (attrs), current element is likely just a tag.
+            const tagName = el.tagName.toLowerCase();
+            let childSelector = tagName;
+
+            // Calculate nth-child if siblings of same type exist
+            const siblings = parent.children(tagName);
+            if (siblings.length > 1) {
+                const index = siblings.index($el) + 1;
+                childSelector += `:nth-child(${index})`;
+            }
+
+            return `${parentSelector} > ${childSelector}`;
+          }
+
+          // Fallback if no parent or at root
+          return el.tagName.toLowerCase();
+        };
+
         $('.ANDI508-element').each(function () {
           const el = $(this);
+          const domEl = this; // Raw DOM element
           const data = el.data('andi508');
 
           if (!data) return;
@@ -46,6 +191,9 @@ export async function extractAlerts(page, moduleName) {
                 // SKIP capturing "extended details" via ANDI Inspector to keep JSON clean.
                 // The user specifically requested removal of #ANDI508-accessibleComponentsTableContainer etc.
                 const finalDetails = ''; // or alertContent if we want the redundancy
+
+                // Calculate bestSelector
+                const bestSelector = getBestSelector(domEl, el);
 
                 // Create Clean Snippet
                 let cleanSnippet = el.prop('outerHTML');
@@ -85,6 +233,7 @@ export async function extractAlerts(page, moduleName) {
                   elementTag: el.prop('tagName').toLowerCase(),
                   elementId: el.attr('id') || '',
                   andiElementIndex: el.attr('data-andi508-index'),
+                  bestSelector: bestSelector,
                   elementSnippet: cleanSnippet.substring(0, 1000),
                   tt_mapping: '',
                 });

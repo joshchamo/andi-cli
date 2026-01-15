@@ -15,22 +15,30 @@ export async function extractAlerts(page, moduleName) {
       if ($) {
         // --- bestSelector Generator Logic ---
         const getBestSelector = (el, $el) => {
-          // Tier 0: ID
+          // Tier 0: The Absolute Unique (ID)
           const id = $el.attr('id');
           if (id && id.trim().length > 0) {
             return `#${id.trim()}`;
           }
 
-          // Tier 1: data-testid
+          // Tier 1: Testing & Unique Attributes (data-testid / name)
           const testId = $el.attr('data-testid');
           if (testId && testId.trim().length > 0) {
             return `[data-testid="${testId.trim()}"]`;
           }
+          const nameAttr = $el.attr('name');
+          if (
+            nameAttr &&
+            nameAttr.trim().length > 0 &&
+            !/viewport|generator|robots/i.test(nameAttr)
+          ) {
+            const tagName = el.tagName.toLowerCase();
+            return `${tagName}[name="${nameAttr.trim()}"]`;
+          }
 
-          // Tier 2: Classes
+          // Shared Logic: Clean Class List
           // Filter out: >3 digits, auto-generated (hash-like), utility classes
           const rawClass = $el.attr('class') || '';
-          // We must strip ANDI classes first because they are injected by the tool
           const classes = rawClass
             .split(/\s+/)
             .filter((c) => !c.startsWith('ANDI508-') && c.trim().length > 0)
@@ -38,16 +46,7 @@ export async function extractAlerts(page, moduleName) {
               // 1. More than 3 digits?
               const digitCount = (c.match(/\d/g) || []).length;
               if (digitCount > 3) return false;
-
-              // 2. Auto-generated / Hash-like? (e.g. 8+ chars and look random?)
-              // Heuristic: mixed case alpha-num with numbers, long length
-              // Simple check: "looks like UUID or hash"
-              // e.g. "x1Y-9a_b"
-              // Let's rely on length + digit mixing for likely hashes if not caught by digitCount
-              // But 'col-md-12' is fine.
-              // 'css-1j23kl' (emotion) is often caught by starting with specific prefixes if known,
-              // but general purpose:
-              // If it's very long (> 20) it's suspicious.
+              // 2. Auto-generated hashes (heuristic: >30 chars)
               if (c.length > 30) return false;
 
               // 3. Utility-only check (common list)
@@ -58,45 +57,108 @@ export async function extractAlerts(page, moduleName) {
                 'inline',
                 'hidden',
                 'visible',
+                'invisible',
                 'text-',
                 'bg-',
                 'p-',
                 'm-',
                 'w-',
                 'h-',
+                'min-w-',
+                'min-h-',
+                'max-w-',
+                'max-h-',
                 'items-',
                 'justify-',
+                'content-',
+                'self-',
+                'order-',
                 'gap-',
                 'border',
                 'rounded',
+                'obj-',
+                'overflow-',
                 'absolute',
                 'relative',
                 'fixed',
+                'sticky',
+                'static',
                 'top-',
                 'left-',
+                'right-',
+                'bottom-',
+                'z-',
               ];
-              if (utilityPrefixes.some((p) => c.startsWith(p))) return false;
+              // Check strict prefix or exact match
+              if (utilityPrefixes.some((p) => c.toLowerCase().startsWith(p)))
+                return false;
               if (
-                ['row', 'col', 'container', 'wrapper'].includes(c.toLowerCase())
+                ['container', 'wrapper', 'fluid', 'clearfix', 'row', 'col'].includes(
+                  c.toLowerCase()
+                )
               )
                 return false;
-
               return true;
             });
 
+          // Tier 2: The "Label Combo" (High Specificity)
+          // Rule: <tag>.<class>[<attribute>="<value>"]
+          // Attributes: aria-label, title, placeholder
           if (classes.length > 0) {
-            // Prefer 1 to 3 classes
-            // We take the first ones that survived filtering
-            return '.' + classes.slice(0, 3).join('.');
+            const bestClass = classes[0]; // First valid class
+            const labelAttrs = ['aria-label', 'title', 'placeholder'];
+            for (const attr of labelAttrs) {
+              const val = $el.attr(attr);
+              if (val && val.trim().length > 0) {
+                if (/track|analytics|_sp|metric/i.test(val)) continue;
+                // Escape double quotes in value
+                const safeVal = val.replace(/"/g, '\\"');
+                const tagName = el.tagName.toLowerCase();
+                // User Example uses *= (contains)
+                return `${tagName}.${bestClass}[${attr}*="${safeVal}"]`;
+              }
+            }
           }
 
-          // Tier 3: Restricted Attributes
-          // Priority: aria-label, role, type, name
-          const attributes = ['aria-label', 'role', 'type', 'name'];
-          for (const attr of attributes) {
+          // Tier 3: The "Nested Content" (Pseudo-selectors)
+          // Use :has() if top-level is generic but contains unique child
+          // 1. Child with ID
+          const childWithId = $el.find('[id]:not([id^="ANDI508-"])').first();
+          if (childWithId.length > 0) {
+            const cId = childWithId.attr('id');
+            let baseSelector =
+              classes.length > 0 ? `.${classes[0]}` : el.tagName.toLowerCase();
+            return `${baseSelector}:has(#${cId})`;
+          }
+          // 2. Child with unique aria-label
+          const childWithLabel = $el.find('[aria-label]').first();
+          if (childWithLabel.length > 0) {
+            const label = childWithLabel.attr('aria-label');
+            if (
+              label &&
+              label.length < 50 &&
+              !/track|analytics|_sp|metric/i.test(label)
+            ) {
+              let baseSelector =
+                classes.length > 0 ? `.${classes[0]}` : el.tagName.toLowerCase();
+              const cTag = childWithLabel[0].tagName.toLowerCase();
+              const safeLabel = label.replace(/"/g, '\\"');
+              return `${baseSelector}:has(${cTag}[aria-label="${safeLabel}"])`;
+            }
+          }
+
+          // Tier 4: Refined Class Filtering
+          // Rule: Combine up to 3 descriptive classes.
+          if (classes.length > 0) {
+            const tag = el.tagName.toLowerCase();
+            return `${tag}.${classes.slice(0, 3).join('.')}`;
+          }
+
+          // Tier 5: Attribute Only (Fall-back)
+          const fallbackAttrs = ['aria-label', 'role', 'type', 'value'];
+          for (const attr of fallbackAttrs) {
             const val = $el.attr(attr);
             if (val && val.trim().length > 0) {
-              // Avoid analytics/tracking values
               if (
                 /track|analytics|_sp|metric/i.test(attr) ||
                 /track|analytics|_sp|metric/i.test(val)
@@ -110,50 +172,7 @@ export async function extractAlerts(page, moduleName) {
             }
           }
 
-          // Tier 4: Structural Context
-          // Try to get parent's best selector + child combinator
-          // We limit recursion to 1 level to "Never exceed one > combinator" constraint (sort of)
-          // Actually, if we call getBestSelector on parent, it might return a class.
-          // We want: ParentSelector > ChildSelector
-          // Child selector logic here needs to fallback to Tag + :nth-child
-          const parent = $el.parent();
-          if (parent.length && parent[0].tagName !== 'BODY') {
-            // Avoid infinite recursion or deep chains.
-            // We strictly manually generate parent selector using Tier 0-2 (ID, TestID, Class) for the parent
-            // If parent has no good ID/Class, we might abort to avoid complex chains.
-            // But strict requirement says "Extract a single parent selector using the same tier rules".
-            // So we can extract parent selector.
-            let parentSelector = '';
-            const pId = parent.attr('id');
-            const pTestId = parent.attr('data-testid');
-            const pClassRaw = parent.attr('class') || '';
-            const pClasses = pClassRaw
-              .split(/\s+/)
-              .filter((c) => !c.startsWith('ANDI508-'))
-              .filter((c) => (c.match(/\d/g) || []).length <= 3); // minimal filter
-
-            if (pId) parentSelector = `#${pId}`;
-            else if (pTestId) parentSelector = `[data-testid="${pTestId}"]`;
-            else if (pClasses.length > 0) parentSelector = `.${pClasses[0]}`;
-            // If parent has no good selector, we might use tag name?
-            else parentSelector = parent[0].tagName.toLowerCase();
-
-            // Now child part (current element)
-            // Since we failed Tier 2 (classes) and Tier 3 (attrs), current element is likely just a tag.
-            const tagName = el.tagName.toLowerCase();
-            let childSelector = tagName;
-
-            // Calculate nth-child if siblings of same type exist
-            const siblings = parent.children(tagName);
-            if (siblings.length > 1) {
-                const index = siblings.index($el) + 1;
-                childSelector += `:nth-child(${index})`;
-            }
-
-            return `${parentSelector} > ${childSelector}`;
-          }
-
-          // Fallback if no parent or at root
+          // Absolute Fallback
           return el.tagName.toLowerCase();
         };
 

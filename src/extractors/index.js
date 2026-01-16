@@ -14,224 +14,90 @@ export async function extractAlerts(page, moduleName) {
       // 1. Element-Level Alerts (requires jQuery as ANDI uses it)
       if ($) {
         // --- bestSelector Generator Logic ---
-        const getBestSelector = (el, $el) => {
-          // Rule: Max Length Safety Valve (checked at end)
+        const getBestSelector = (el) => {
+          // Rule: Max Length Safety Valve
           const MAX_LENGTH = 100;
 
-          // Helper: Escape CSS special characters using standard API if available
-          const escapeCss = (str) => {
+          // 0. Helper: Native CSS Escaping with Polyfill Fallback
+          // We prioritize CSS.escape if available for 100% accuracy.
+          const escape = (str) => {
             if (window.CSS && window.CSS.escape) {
               return window.CSS.escape(str);
             }
-            // Manual fallback for : [ ] . # etc.
+            // Fallback for older environments
             return str.replace(/([:\[\].#])/g, '\\$1');
           };
 
-          // Helper: Is Generic Utility?
-          const isGenericUtility = (c) => {
-            const utilityPrefixes = [
-              'flex',
-              'grid',
-              'block',
-              'inline',
-              'hidden',
-              'visible',
-              'invisible',
-              'p-',
-              'm-',
-              'w-',
-              'h-',
-              'min-w-',
-              'min-h-',
-              'max-w-',
-              'max-h-',
-              'items-',
-              'justify-',
-              'content-',
-              'self-',
-              'order-',
-              'gap-',
-              'border',
-              'rounded',
-              'overflow-',
-              'absolute',
-              'relative',
-              'fixed',
-              'static',
-              'top-',
-              'left-',
-              'right-',
-              'bottom-',
-              'z-',
-              'cursor',
-              'pointer',
-              'select',
-              'resize',
-              'isolate',
-              'translate',
-              'transform',
-              'transition',
-              'duration',
-              'ease',
-              'delay',
-              'rotate',
-              'scale',
-              'origin',
-              'ring',
-              'shadow',
-              'outline',
-              'font-',
-              'leading-',
-              'tracking-',
-              'align-',
-              'whitespace-',
-              'list-',
-              'table',
-              'opacity', // often generic, unless specific requirement? User put it in generic list before
-            ];
-            // Exact match or prefix match
-            if (utilityPrefixes.some((p) => c === p || c.startsWith(p)))
-              return true;
-            if (
-              ['row', 'col', 'container', 'wrapper', 'clearfix'].includes(c)
-            )
-              return true;
-            // Short tailwind patterns like p-1, m-0 (regex covers prefixes above mostly, but catches strict nums)
-            return false;
-          };
-
-          // Helper: Is Interesting Utility? (State, JIT, Semantic Color)
-          const isInterestingUtility = (c) => {
-            // State Modifiers (hover:, focus:, group-hover:)
-            if (c.includes(':')) return true;
-            // JIT Values ([...])
-            if (c.includes('[') && c.includes(']')) return true;
-            // Semantic Colors (starts with text- or bg- but not orientation/generic)
-            // e.g. text-inkwell included, text-center excluded
-            if (c.startsWith('text-') || c.startsWith('bg-')) {
-              const val = c.substring(c.indexOf('-') + 1);
-              if (
-                ['center', 'left', 'right', 'justify', 'top', 'bottom'].includes(
-                  val
-                )
-              )
-                return false;
-              return true;
-            }
-            return false;
-          };
-
-          const checkLength = (sel) => {
-            if (sel.length > MAX_LENGTH) {
-              const tag = el.tagName.toLowerCase();
-              // Try simplified fallback: Tag + most unique char
-              // But simplest is just Tag if too long.
-              return tag;
-            }
-            return sel;
-          };
-
-          // Tier 0: ID Selector
-          const id = $el.attr('id');
-          if (id && id.trim().length > 0) {
-            return checkLength(`#${escapeCss(id.trim())}`);
+          // 1. Gold Standard: ID
+          if (el.id) {
+            return `#${escape(el.id)}`;
           }
 
-          // Tier 1: Unique Attributes (data-testid, name)
-          const testId = $el.attr('data-testid');
-          if (testId && testId.trim().length > 0) {
-            return checkLength(
-              `[data-testid="${testId.trim().replace(/"/g, '\\"')}"]`
-            );
-          }
-          const nameAttr = $el.attr('name');
-          if (
-            nameAttr &&
-            nameAttr.trim().length > 0 &&
-            !/viewport|generator|robots/i.test(nameAttr)
-          ) {
-            const tagName = el.tagName.toLowerCase();
-            return checkLength(
-              `${tagName}[name="${nameAttr.trim().replace(/"/g, '\\"')}"]`
-            );
-          }
-
-          // Tier 2: Class-based Selector (with Utility Fallback)
-          const rawClass = $el.attr('class') || '';
-          const classes = rawClass
-            .split(/\s+/)
-            .filter((c) => !c.startsWith('ANDI508-') && c.trim().length > 0)
-            .filter((c) => {
-              // Filter > 3 digits or long hashes
-              if ((c.match(/\d/g) || []).length > 3) return false;
-              if (c.length > 30) return false;
-              return true;
-            });
-
-          // Separate generic utilities from "semantic" classes
-          const semanticClasses = classes.filter((c) => !isGenericUtility(c));
-          let finalClasses = [];
-
-          if (semanticClasses.length > 0) {
-            finalClasses = semanticClasses;
-          } else {
-            // Utility Fallback Rule: only generic utilities remained?
-            // Filter for "Semantic/Unique" utilities (State, JIT, Colors)
-            const interesting = classes.filter((c) => isInterestingUtility(c));
-            if (interesting.length > 0) {
-              finalClasses = interesting;
+          // 2. A11y & Test Identifiers (Native Escaping)
+          // We test uniqueness immediately.
+          const uniqueAttrs = ['data-testid', 'aria-label', 'name'];
+          for (const attr of uniqueAttrs) {
+            const val = el.getAttribute(attr);
+            if (val) {
+              const selector = `${el.tagName.toLowerCase()}[${attr}="${escape(val)}"]`;
+              if (document.querySelectorAll(selector).length === 1) {
+                return selector;
+              }
             }
           }
 
-          if (finalClasses.length > 0) {
-            // Combine up to 3 classes
-            const selected = finalClasses.slice(0, 3);
-            const tagName = el.tagName.toLowerCase();
-            const classSelector = selected
-              .map((c) => `.${escapeCss(c)}`)
-              .join('');
-            return checkLength(`${tagName}${classSelector}`);
-          }
-
-          // Tier 3: Attribute + Tag Combo (aria-label, role, type)
-          const attributes = ['aria-label', 'role', 'type'];
-          for (const attr of attributes) {
-            const val = $el.attr(attr);
-            if (val && val.trim().length > 0) {
-              if (/track|analytics|_sp|metric/i.test(val)) continue;
-              const safeVal = val.replace(/"/g, '\\"');
-              const tagName = el.tagName.toLowerCase();
-              const op = attr === 'aria-label' ? '*=' : '=';
-              return checkLength(`${tagName}[${attr}${op}"${safeVal}"]`);
+          // 3. The "Structural Fallback" (GPS Coordinate)
+          // Moves up the tree until it finds a unique path.
+          // Uses :nth-of-type to differentiate siblings.
+          let path = '';
+          let node = el;
+          while (node && node.nodeType === Node.ELEMENT_NODE) {
+            let selector = node.nodeName.toLowerCase();
+            if (node.id) {
+              // Found an ID anchor, use it and stop climbing
+              selector += '#' + escape(node.id);
+              path = selector + (path ? ' > ' + path : '');
+              break;
+            } else {
+              // Calculate nth-of-type index
+              let sibling = node;
+              let nth = 1;
+              while ((sibling = sibling.previousElementSibling)) {
+                if (sibling.nodeName === node.nodeName) nth++;
+              }
+              // Add :nth-of-type only if strictly needed (not the only one of its type)
+              // But to be safe and "GPS-like", if it has siblings of same type, we add it.
+              // Logic check: does it have next siblings of same type?
+              let hasNextSame = false;
+              let nextParam = node.nextElementSibling;
+              while (nextParam) {
+                if (nextParam.nodeName === node.nodeName) {
+                    hasNextSame = true;
+                    break;
+                }
+                nextParam = nextParam.nextElementSibling;
+              }
+              
+              if (nth > 1 || hasNextSame) {
+                selector += `:nth-of-type(${nth})`;
+              }
             }
-          }
-
-          // Tier 4: Structural Context (Parent)
-          // Use one parent anchor .parent-class > span
-          const parent = $el.parent();
-          if (parent.length && parent[0].tagName !== 'BODY') {
-            const pId = parent.attr('id');
-            const pClassesRaw = parent.attr('class') || '';
-            const pClasses = pClassesRaw
-              .split(/\s+/)
-              .filter((c) => !c.startsWith('ANDI508-') && c.trim().length > 0)
-              .filter((c) => !isGenericUtility(c));
-
-            let parentSelector = '';
-            if (pId) {
-              parentSelector = `#${escapeCss(pId)}`;
-            } else if (pClasses.length > 0) {
-              parentSelector = `.${escapeCss(pClasses[0])}`;
+            path = selector + (path ? ' > ' + path : '');
+            
+            // Verify uniqueness of the growing path
+            // Because we are climbing up, the path becomes more specific.
+            // If it hits exactly 1 element, we are done.
+            // Optimization: checking document.querySelectorAll at every step is expensive vs just building the full path.
+            // But the requirement is "Verify ... before being saved".
+            // Let's check uniqueness now.
+            if (document.querySelectorAll(path).length === 1) {
+                break;
             }
-
-            if (parentSelector) {
-              const tagName = el.tagName.toLowerCase();
-              return checkLength(`${parentSelector} > ${tagName}`);
-            }
+            
+            node = node.parentNode;
           }
-
-          // Fallback Absolute
-          return el.tagName.toLowerCase();
+          
+          return path;
         };
 
         $('.ANDI508-element').each(function () {
@@ -270,7 +136,7 @@ export async function extractAlerts(page, moduleName) {
                 const finalDetails = ''; // or alertContent if we want the redundancy
 
                 // Calculate bestSelector
-                const bestSelector = getBestSelector(domEl, el);
+                const bestSelector = getBestSelector(domEl);
 
                 // Create Clean Snippet
                 let cleanSnippet = el.prop('outerHTML');

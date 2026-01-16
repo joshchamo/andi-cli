@@ -49,7 +49,12 @@ export async function extractAlerts(page, moduleName) {
               // 2. Auto-generated hashes (heuristic: >30 chars)
               if (c.length > 30) return false;
 
-              // 3. Utility-only check (common list)
+              // 3. Modifiers and arbitrary values (colon, brackets, negatives)
+              // Common in Tailwind: dark:, hover:, text-[#123], -translate-x
+              if (c.includes(':') || c.includes('[') || c.startsWith('-'))
+                return false;
+
+              // 4. Utility-only check (common list)
               const utilityPrefixes = [
                 'flex',
                 'grid',
@@ -88,14 +93,44 @@ export async function extractAlerts(page, moduleName) {
                 'right-',
                 'bottom-',
                 'z-',
+                'translate',
+                'transform',
+                'transition',
+                'duration',
+                'ease',
+                'delay',
+                'rotate',
+                'scale',
+                'origin',
+                'cursor',
+                'pointer',
+                'select',
+                'resize',
+                'shadow',
+                'ring',
+                'outline',
+                'font-',
+                'leading-',
+                'tracking-',
+                'align-',
+                'whitespace-',
+                'opacity',
+                'list-',
+                'table',
+                'isolate',
               ];
               // Check strict prefix or exact match
               if (utilityPrefixes.some((p) => c.toLowerCase().startsWith(p)))
                 return false;
               if (
-                ['container', 'wrapper', 'fluid', 'clearfix', 'row', 'col'].includes(
-                  c.toLowerCase()
-                )
+                [
+                  'container',
+                  'wrapper',
+                  'fluid',
+                  'clearfix',
+                  'row',
+                  'col',
+                ].includes(c.toLowerCase())
               )
                 return false;
               return true;
@@ -140,7 +175,9 @@ export async function extractAlerts(page, moduleName) {
               !/track|analytics|_sp|metric/i.test(label)
             ) {
               let baseSelector =
-                classes.length > 0 ? `.${classes[0]}` : el.tagName.toLowerCase();
+                classes.length > 0
+                  ? `.${classes[0]}`
+                  : el.tagName.toLowerCase();
               const cTag = childWithLabel[0].tagName.toLowerCase();
               const safeLabel = label.replace(/"/g, '\\"');
               return `${baseSelector}:has(${cTag}[aria-label="${safeLabel}"])`;

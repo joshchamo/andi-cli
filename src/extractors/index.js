@@ -15,16 +15,134 @@ export async function extractAlerts(page, moduleName) {
       if ($) {
         // --- bestSelector Generator Logic ---
         const getBestSelector = (el, $el) => {
-          // Tier 0: The Absolute Unique (ID)
+          // Rule: Max Length Safety Valve (checked at end)
+          const MAX_LENGTH = 100;
+
+          // Helper: Escape CSS special characters using standard API if available
+          const escapeCss = (str) => {
+            if (window.CSS && window.CSS.escape) {
+              return window.CSS.escape(str);
+            }
+            // Manual fallback for : [ ] . # etc.
+            return str.replace(/([:\[\].#])/g, '\\$1');
+          };
+
+          // Helper: Is Generic Utility?
+          const isGenericUtility = (c) => {
+            const utilityPrefixes = [
+              'flex',
+              'grid',
+              'block',
+              'inline',
+              'hidden',
+              'visible',
+              'invisible',
+              'p-',
+              'm-',
+              'w-',
+              'h-',
+              'min-w-',
+              'min-h-',
+              'max-w-',
+              'max-h-',
+              'items-',
+              'justify-',
+              'content-',
+              'self-',
+              'order-',
+              'gap-',
+              'border',
+              'rounded',
+              'overflow-',
+              'absolute',
+              'relative',
+              'fixed',
+              'static',
+              'top-',
+              'left-',
+              'right-',
+              'bottom-',
+              'z-',
+              'cursor',
+              'pointer',
+              'select',
+              'resize',
+              'isolate',
+              'translate',
+              'transform',
+              'transition',
+              'duration',
+              'ease',
+              'delay',
+              'rotate',
+              'scale',
+              'origin',
+              'ring',
+              'shadow',
+              'outline',
+              'font-',
+              'leading-',
+              'tracking-',
+              'align-',
+              'whitespace-',
+              'list-',
+              'table',
+              'opacity', // often generic, unless specific requirement? User put it in generic list before
+            ];
+            // Exact match or prefix match
+            if (utilityPrefixes.some((p) => c === p || c.startsWith(p)))
+              return true;
+            if (
+              ['row', 'col', 'container', 'wrapper', 'clearfix'].includes(c)
+            )
+              return true;
+            // Short tailwind patterns like p-1, m-0 (regex covers prefixes above mostly, but catches strict nums)
+            return false;
+          };
+
+          // Helper: Is Interesting Utility? (State, JIT, Semantic Color)
+          const isInterestingUtility = (c) => {
+            // State Modifiers (hover:, focus:, group-hover:)
+            if (c.includes(':')) return true;
+            // JIT Values ([...])
+            if (c.includes('[') && c.includes(']')) return true;
+            // Semantic Colors (starts with text- or bg- but not orientation/generic)
+            // e.g. text-inkwell included, text-center excluded
+            if (c.startsWith('text-') || c.startsWith('bg-')) {
+              const val = c.substring(c.indexOf('-') + 1);
+              if (
+                ['center', 'left', 'right', 'justify', 'top', 'bottom'].includes(
+                  val
+                )
+              )
+                return false;
+              return true;
+            }
+            return false;
+          };
+
+          const checkLength = (sel) => {
+            if (sel.length > MAX_LENGTH) {
+              const tag = el.tagName.toLowerCase();
+              // Try simplified fallback: Tag + most unique char
+              // But simplest is just Tag if too long.
+              return tag;
+            }
+            return sel;
+          };
+
+          // Tier 0: ID Selector
           const id = $el.attr('id');
           if (id && id.trim().length > 0) {
-            return `#${id.trim()}`;
+            return checkLength(`#${escapeCss(id.trim())}`);
           }
 
-          // Tier 1: Testing & Unique Attributes (data-testid / name)
+          // Tier 1: Unique Attributes (data-testid, name)
           const testId = $el.attr('data-testid');
           if (testId && testId.trim().length > 0) {
-            return `[data-testid="${testId.trim()}"]`;
+            return checkLength(
+              `[data-testid="${testId.trim().replace(/"/g, '\\"')}"]`
+            );
           }
           const nameAttr = $el.attr('name');
           if (
@@ -33,183 +151,86 @@ export async function extractAlerts(page, moduleName) {
             !/viewport|generator|robots/i.test(nameAttr)
           ) {
             const tagName = el.tagName.toLowerCase();
-            return `${tagName}[name="${nameAttr.trim()}"]`;
+            return checkLength(
+              `${tagName}[name="${nameAttr.trim().replace(/"/g, '\\"')}"]`
+            );
           }
 
-          // Shared Logic: Clean Class List
-          // Filter out: >3 digits, auto-generated (hash-like), utility classes
+          // Tier 2: Class-based Selector (with Utility Fallback)
           const rawClass = $el.attr('class') || '';
           const classes = rawClass
             .split(/\s+/)
             .filter((c) => !c.startsWith('ANDI508-') && c.trim().length > 0)
             .filter((c) => {
-              // 1. More than 3 digits?
-              const digitCount = (c.match(/\d/g) || []).length;
-              if (digitCount > 3) return false;
-              // 2. Auto-generated hashes (heuristic: >30 chars)
+              // Filter > 3 digits or long hashes
+              if ((c.match(/\d/g) || []).length > 3) return false;
               if (c.length > 30) return false;
-
-              // 3. Modifiers and arbitrary values (colon, brackets, negatives)
-              // Common in Tailwind: dark:, hover:, text-[#123], -translate-x
-              if (c.includes(':') || c.includes('[') || c.startsWith('-'))
-                return false;
-
-              // 4. Utility-only check (common list)
-              const utilityPrefixes = [
-                'flex',
-                'grid',
-                'block',
-                'inline',
-                'hidden',
-                'visible',
-                'invisible',
-                'text-',
-                'bg-',
-                'p-',
-                'm-',
-                'w-',
-                'h-',
-                'min-w-',
-                'min-h-',
-                'max-w-',
-                'max-h-',
-                'items-',
-                'justify-',
-                'content-',
-                'self-',
-                'order-',
-                'gap-',
-                'border',
-                'rounded',
-                'obj-',
-                'overflow-',
-                'absolute',
-                'relative',
-                'fixed',
-                'sticky',
-                'static',
-                'top-',
-                'left-',
-                'right-',
-                'bottom-',
-                'z-',
-                'translate',
-                'transform',
-                'transition',
-                'duration',
-                'ease',
-                'delay',
-                'rotate',
-                'scale',
-                'origin',
-                'cursor',
-                'pointer',
-                'select',
-                'resize',
-                'shadow',
-                'ring',
-                'outline',
-                'font-',
-                'leading-',
-                'tracking-',
-                'align-',
-                'whitespace-',
-                'opacity',
-                'list-',
-                'table',
-                'isolate',
-              ];
-              // Check strict prefix or exact match
-              if (utilityPrefixes.some((p) => c.toLowerCase().startsWith(p)))
-                return false;
-              if (
-                [
-                  'container',
-                  'wrapper',
-                  'fluid',
-                  'clearfix',
-                  'row',
-                  'col',
-                ].includes(c.toLowerCase())
-              )
-                return false;
               return true;
             });
 
-          // Tier 2: The "Label Combo" (High Specificity)
-          // Rule: <tag>.<class>[<attribute>="<value>"]
-          // Attributes: aria-label, title, placeholder
-          if (classes.length > 0) {
-            const bestClass = classes[0]; // First valid class
-            const labelAttrs = ['aria-label', 'title', 'placeholder'];
-            for (const attr of labelAttrs) {
-              const val = $el.attr(attr);
-              if (val && val.trim().length > 0) {
-                if (/track|analytics|_sp|metric/i.test(val)) continue;
-                // Escape double quotes in value
-                const safeVal = val.replace(/"/g, '\\"');
-                const tagName = el.tagName.toLowerCase();
-                // User Example uses *= (contains)
-                return `${tagName}.${bestClass}[${attr}*="${safeVal}"]`;
-              }
+          // Separate generic utilities from "semantic" classes
+          const semanticClasses = classes.filter((c) => !isGenericUtility(c));
+          let finalClasses = [];
+
+          if (semanticClasses.length > 0) {
+            finalClasses = semanticClasses;
+          } else {
+            // Utility Fallback Rule: only generic utilities remained?
+            // Filter for "Semantic/Unique" utilities (State, JIT, Colors)
+            const interesting = classes.filter((c) => isInterestingUtility(c));
+            if (interesting.length > 0) {
+              finalClasses = interesting;
             }
           }
 
-          // Tier 3: The "Nested Content" (Pseudo-selectors)
-          // Use :has() if top-level is generic but contains unique child
-          // 1. Child with ID
-          const childWithId = $el.find('[id]:not([id^="ANDI508-"])').first();
-          if (childWithId.length > 0) {
-            const cId = childWithId.attr('id');
-            let baseSelector =
-              classes.length > 0 ? `.${classes[0]}` : el.tagName.toLowerCase();
-            return `${baseSelector}:has(#${cId})`;
-          }
-          // 2. Child with unique aria-label
-          const childWithLabel = $el.find('[aria-label]').first();
-          if (childWithLabel.length > 0) {
-            const label = childWithLabel.attr('aria-label');
-            if (
-              label &&
-              label.length < 50 &&
-              !/track|analytics|_sp|metric/i.test(label)
-            ) {
-              let baseSelector =
-                classes.length > 0
-                  ? `.${classes[0]}`
-                  : el.tagName.toLowerCase();
-              const cTag = childWithLabel[0].tagName.toLowerCase();
-              const safeLabel = label.replace(/"/g, '\\"');
-              return `${baseSelector}:has(${cTag}[aria-label="${safeLabel}"])`;
-            }
+          if (finalClasses.length > 0) {
+            // Combine up to 3 classes
+            const selected = finalClasses.slice(0, 3);
+            const tagName = el.tagName.toLowerCase();
+            const classSelector = selected
+              .map((c) => `.${escapeCss(c)}`)
+              .join('');
+            return checkLength(`${tagName}${classSelector}`);
           }
 
-          // Tier 4: Refined Class Filtering
-          // Rule: Combine up to 3 descriptive classes.
-          if (classes.length > 0) {
-            const tag = el.tagName.toLowerCase();
-            return `${tag}.${classes.slice(0, 3).join('.')}`;
-          }
-
-          // Tier 5: Attribute Only (Fall-back)
-          const fallbackAttrs = ['aria-label', 'role', 'type', 'value'];
-          for (const attr of fallbackAttrs) {
+          // Tier 3: Attribute + Tag Combo (aria-label, role, type)
+          const attributes = ['aria-label', 'role', 'type'];
+          for (const attr of attributes) {
             const val = $el.attr(attr);
             if (val && val.trim().length > 0) {
-              if (
-                /track|analytics|_sp|metric/i.test(attr) ||
-                /track|analytics|_sp|metric/i.test(val)
-              ) {
-                continue;
-              }
-              const tagName = el.tagName.toLowerCase();
-              // Escape double quotes in value
+              if (/track|analytics|_sp|metric/i.test(val)) continue;
               const safeVal = val.replace(/"/g, '\\"');
-              return `${tagName}[${attr}="${safeVal}"]`;
+              const tagName = el.tagName.toLowerCase();
+              const op = attr === 'aria-label' ? '*=' : '=';
+              return checkLength(`${tagName}[${attr}${op}"${safeVal}"]`);
             }
           }
 
-          // Absolute Fallback
+          // Tier 4: Structural Context (Parent)
+          // Use one parent anchor .parent-class > span
+          const parent = $el.parent();
+          if (parent.length && parent[0].tagName !== 'BODY') {
+            const pId = parent.attr('id');
+            const pClassesRaw = parent.attr('class') || '';
+            const pClasses = pClassesRaw
+              .split(/\s+/)
+              .filter((c) => !c.startsWith('ANDI508-') && c.trim().length > 0)
+              .filter((c) => !isGenericUtility(c));
+
+            let parentSelector = '';
+            if (pId) {
+              parentSelector = `#${escapeCss(pId)}`;
+            } else if (pClasses.length > 0) {
+              parentSelector = `.${escapeCss(pClasses[0])}`;
+            }
+
+            if (parentSelector) {
+              const tagName = el.tagName.toLowerCase();
+              return checkLength(`${parentSelector} > ${tagName}`);
+            }
+          }
+
+          // Fallback Absolute
           return el.tagName.toLowerCase();
         };
 

@@ -142,12 +142,20 @@
                 {{/if}}
               {{/if}}
 
-              {{#if elementSnippet}}
+              {{#if bestSelector}}
                 <div class="code-block-wrapper">
                   <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-                  <div class="code-content"><pre>{{elementSnippet}}</pre></div>
+                  <div class="code-content"><pre>{{bestSelector}}</pre></div>
                   <button class="expand-btn" onclick="toggleExpand(this)">Show more</button>
                 </div>
+              {{else}}
+                {{#if elementSnippet}}
+                  <div class="code-block-wrapper">
+                    <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                    <div class="code-content"><pre>{{elementSnippet}}</pre></div>
+                    <button class="expand-btn" onclick="toggleExpand(this)">Show more</button>
+                  </div>
+                {{/if}}
               {{/if}}
             </td>
           </tr>

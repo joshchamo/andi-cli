@@ -13,8 +13,96 @@ export async function extractAlerts(page, moduleName) {
 
       // 1. Element-Level Alerts (requires jQuery as ANDI uses it)
       if ($) {
+        // --- bestSelector Generator Logic ---
+        const getBestSelector = (el) => {
+          // Rule: Max Length Safety Valve
+          const MAX_LENGTH = 100;
+
+          // 0. Helper: Native CSS Escaping with Polyfill Fallback
+          // We prioritize CSS.escape if available for 100% accuracy.
+          const escape = (str) => {
+            if (window.CSS && window.CSS.escape) {
+              return window.CSS.escape(str);
+            }
+            // Fallback for older environments
+            return str.replace(/([:\[\].#])/g, '\\$1');
+          };
+
+          // 1. Gold Standard: ID
+          if (el.id) {
+            return `#${escape(el.id)}`;
+          }
+
+          // 2. A11y & Test Identifiers (Native Escaping)
+          // We test uniqueness immediately.
+          const uniqueAttrs = ['data-testid', 'aria-label', 'name'];
+          for (const attr of uniqueAttrs) {
+            const val = el.getAttribute(attr);
+            if (val) {
+              const selector = `${el.tagName.toLowerCase()}[${attr}="${escape(val)}"]`;
+              if (document.querySelectorAll(selector).length === 1) {
+                return selector;
+              }
+            }
+          }
+
+          // 3. The "Structural Fallback" (GPS Coordinate)
+          // Moves up the tree until it finds a unique path.
+          // Uses :nth-of-type to differentiate siblings.
+          let path = '';
+          let node = el;
+          while (node && node.nodeType === Node.ELEMENT_NODE) {
+            let selector = node.nodeName.toLowerCase();
+            if (node.id) {
+              // Found an ID anchor, use it and stop climbing
+              selector += '#' + escape(node.id);
+              path = selector + (path ? ' > ' + path : '');
+              break;
+            } else {
+              // Calculate nth-of-type index
+              let sibling = node;
+              let nth = 1;
+              while ((sibling = sibling.previousElementSibling)) {
+                if (sibling.nodeName === node.nodeName) nth++;
+              }
+              // Add :nth-of-type only if strictly needed (not the only one of its type)
+              // But to be safe and "GPS-like", if it has siblings of same type, we add it.
+              // Logic check: does it have next siblings of same type?
+              let hasNextSame = false;
+              let nextParam = node.nextElementSibling;
+              while (nextParam) {
+                if (nextParam.nodeName === node.nodeName) {
+                    hasNextSame = true;
+                    break;
+                }
+                nextParam = nextParam.nextElementSibling;
+              }
+              
+              if (nth > 1 || hasNextSame) {
+                selector += `:nth-of-type(${nth})`;
+              }
+            }
+            path = selector + (path ? ' > ' + path : '');
+            
+            // Verify uniqueness of the growing path
+            // Because we are climbing up, the path becomes more specific.
+            // If it hits exactly 1 element, we are done.
+            // Optimization: checking document.querySelectorAll at every step is expensive vs just building the full path.
+            // But the requirement is "Verify ... before being saved".
+            // Let's check uniqueness now.
+            if (document.querySelectorAll(path).length === 1) {
+                break;
+            }
+            
+            node = node.parentNode;
+          }
+          
+          return path;
+        };
+
         $('.ANDI508-element').each(function () {
           const el = $(this);
+          const domEl = this; // Raw DOM element
           const data = el.data('andi508');
 
           if (!data) return;
@@ -36,96 +124,19 @@ export async function extractAlerts(page, moduleName) {
                 // Extract text, handling some common ANDI markup if needed
                 const alertMessage = div.innerText.trim();
                 const helpUrl = div.querySelector('a')?.href || null;
+                const groupId =
+                  div.querySelector('a')?.getAttribute('data-andi-group') ||
+                  null;
 
                 const sig = `${severityMap[key]}|${alertMessage}`;
                 elementAlertSignatures.add(sig);
 
-                // Attempt to capture extended details via ANDI Inspector
-                let extendedDetails = '';
-                try {
-                  if (
-                    window.AndiModule &&
-                    typeof window.AndiModule.inspect === 'function'
-                  ) {
-                    window.AndiModule.inspect(el);
+                // SKIP capturing "extended details" via ANDI Inspector to keep JSON clean.
+                // The user specifically requested removal of #ANDI508-accessibleComponentsTableContainer etc.
+                const finalDetails = ''; // or alertContent if we want the redundancy
 
-                    // Dynamic search for detailed info (e.g., Contrast Ratio)
-                    const container = $('#ANDI508');
-                    // We look for text that changes based on inspection.
-                    // For contrast, "Contrast Ratio" is a key indicator.
-                    // For others, we might just grab the "Active Element" section.
-
-                    // Strategy: Look for the 'accessible name' or 'output' container
-                    const likelyContainers = [
-                      '#ANDI508-additionalPage',
-                      '#ANDI508-alertList',
-                      '#ANDI508-elementDetails',
-                    ];
-
-                    for (const sel of likelyContainers) {
-                      const c = $(sel);
-                      // Strict length check can miss short but critical output like "Active Element"
-                      // ANDI Output container is critical, so we check specifically for it
-                      if (c.length) {
-                        if (sel === '#ANDI508-elementDetails') {
-                          // Capture HTML for Element Details to preserve styling/structure
-                          // We ensure meaningful content by checking if it contains the Output Container or Components Table
-                          if (
-                            c.find('#ANDI508-outputText').length ||
-                            c.find('#ANDI508-accessibleComponentsTable').length
-                          ) {
-                            // Clone to modify structure without affecting live page
-                            const clone = c.clone();
-                            // Remove redundant element name info (tag/id) as we show this in the report column
-                            clone
-                              .find('#ANDI508-elementNameContainer')
-                              .remove();
-                            // Remove empty additional details if legitimate empty
-                            if (
-                              clone
-                                .find('#ANDI508-additionalElementDetails')
-                                .text()
-                                .trim().length === 0
-                            ) {
-                              clone
-                                .find('#ANDI508-additionalElementDetails')
-                                .remove();
-                            }
-
-                            let html = clone.html();
-                            extendedDetails += html + '\n';
-                          }
-                        } else if (c.text().trim().length > 0) {
-                          // For other containers, capture if there is any text
-                          extendedDetails += c.text().trim() + '\n';
-                        }
-                      }
-                    }
-
-                    // Specific check for Contrast Ratio if not found
-                    if (
-                      !extendedDetails.includes('Contrast Ratio') &&
-                      modName === 'color contrast'
-                    ) {
-                      container.find('*').each(function () {
-                        const t = $(this).text();
-                        if (
-                          t.includes('Contrast Ratio:') &&
-                          $(this).children().length === 0
-                        ) {
-                          // Found a leaf node or close to it
-                          extendedDetails += $(this).parent().text().trim(); // Capture context
-                        }
-                      });
-                    }
-                  }
-                } catch (e) {}
-
-                const finalDetails =
-                  extendedDetails &&
-                  extendedDetails.length > alertMessage.length
-                    ? extendedDetails
-                    : alertContent;
+                // Calculate bestSelector
+                const bestSelector = getBestSelector(domEl);
 
                 // Create Clean Snippet
                 let cleanSnippet = el.prop('outerHTML');
@@ -160,10 +171,12 @@ export async function extractAlerts(page, moduleName) {
                   severity: severityMap[key],
                   alertMessage: alertMessage,
                   helpUrl: helpUrl, // Capture HELP URL for mapping
+                  groupId: groupId,
                   alertDetails: finalDetails,
                   elementTag: el.prop('tagName').toLowerCase(),
                   elementId: el.attr('id') || '',
                   andiElementIndex: el.attr('data-andi508-index'),
+                  bestSelector: bestSelector,
                   elementSnippet: cleanSnippet.substring(0, 1000),
                   tt_mapping: '',
                 });
@@ -204,6 +217,9 @@ export async function extractAlerts(page, moduleName) {
                 // Normalize message same as Element loop
                 const div = document.createElement('div');
                 div.innerHTML = msg;
+                const groupId =
+                  div.querySelector('a')?.getAttribute('data-andi-group') ||
+                  null;
                 msg = div.innerText.trim();
 
                 // Check strict element signature first
@@ -225,6 +241,7 @@ export async function extractAlerts(page, moduleName) {
                     andiModule: modName,
                     severity: severityMap[key],
                     alertMessage: msg,
+                    groupId: groupId,
                     alertDetails: item.toString(), // Keep original for details
                     elementTag: 'PAGE',
                     elementId: '',
